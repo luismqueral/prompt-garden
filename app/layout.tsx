@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Prompt Garden",
-  description: "Create and manage LLM prompts for various projects",
+  description: "Manage your AI prompts",
 };
 
 export default function RootLayout({
@@ -16,11 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <div className="min-h-screen flex flex-col">
-          {children}
-        </div>
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
