@@ -153,10 +153,12 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
                 strokeLinecap="round" 
                 strokeLinejoin="round"
               >
-                <path d="M17.5 5.5C19 7 20.5 9 21 11c-2.5.5-5 .5-8.5-1" />
-                <path d="M5.5 17.5C7 19 9 20.5 11 21c.5-2.5.5-5-1-8.5" />
-                <path d="M16.5 11.5c1 2 2 4 2 6-2 .5-5 .5-8.5-1" />
-                <path d="M18.5 5.5c-2 1-4.5 1.5-7.5 1-1.5-3-1.5-5.5-1-7.5 3 .5 5.5.5 8.5-1" />
+                <path d="M18 4l3 3-3 3" />
+                <path d="M18 20l3-3-3-3" />
+                <path d="M3 7h3a4 4 0 0 1 4 4v6" />
+                <path d="M21 7h-3a4 4 0 0 0-4 4v.5" />
+                <path d="M3 17h3a4 4 0 0 0 4-4v-.5" />
+                <path d="M21 17h-3a4 4 0 0 1-4-4V7" />
               </svg>
               Remix Prompt
             </Button>
