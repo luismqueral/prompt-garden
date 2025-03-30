@@ -436,14 +436,14 @@ export default function HomePage() {
                 
                 {/* Generate prompt helper section - hidden when remixing */}
                 {!isRemixMode && (
-                  <div className="mb-6 bg-gray-100 p-4 rounded-md">
-                    <p className="text-sm font-medium mb-2">Need help writing your prompt?</p>
+                  <div className="mb-6 bg-blue-50 p-4 rounded-md border border-blue-100">
+                    <p className="text-sm font-medium mb-2 text-blue-800">Need help writing your prompt?</p>
                     <div className="flex gap-2">
                       <Input
                         placeholder="Describe what you're trying to do..."
                         className="flex-1 bg-white font-mono"
                       />
-                      <Button variant="outline" size="default" className="whitespace-nowrap">
+                      <Button variant="outline" size="default" className="whitespace-nowrap bg-white">
                         <MdAutoFixHigh className="h-4 w-4 mr-1.5" />
                         Generate Prompt
                       </Button>
