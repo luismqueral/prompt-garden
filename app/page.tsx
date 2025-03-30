@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 // Add Material Design icons
-import { MdSearch, MdClose, MdAutoFixHigh } from "react-icons/md";
+import { MdSearch, MdClose, MdAutoFixHigh, MdContentCopy, MdCheck } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -314,48 +314,65 @@ export default function HomePage() {
     // Function to handle copying prompt to clipboard
     const handleCopyPrompt = (e: React.MouseEvent) => {
       e.preventDefault();
+      
+      // Get the target element safely
+      const targetDiv = e.currentTarget as HTMLElement;
+      if (!targetDiv) {
+        console.error('Target element not found');
+        return;
+      }
+      
       navigator.clipboard.writeText(prompt.content)
         .then(() => {
-          // Show a temporary tooltip or notification
-          const targetDiv = e.currentTarget as HTMLElement;
-          const notificationEl = document.createElement('div');
-          notificationEl.className = 'absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-70 text-white rounded-md transition-opacity';
-          
-          // Create an inner container for better styling
-          const innerContainer = document.createElement('div');
-          innerContainer.className = 'bg-blue-600 px-4 py-2 rounded-md flex items-center shadow-lg';
-          
-          // Add checkmark icon or text
-          const iconSpan = document.createElement('span');
-          iconSpan.className = 'mr-2';
-          iconSpan.textContent = '✓';
-          
-          const textSpan = document.createElement('span');
-          textSpan.textContent = 'Copied to clipboard!';
-          
-          innerContainer.appendChild(iconSpan);
-          innerContainer.appendChild(textSpan);
-          notificationEl.appendChild(innerContainer);
-          
-          targetDiv.style.position = 'relative';
-          targetDiv.appendChild(notificationEl);
-          
-          // Add fade-in effect
-          notificationEl.style.opacity = '0';
-          setTimeout(() => {
-            notificationEl.style.opacity = '1';
-            notificationEl.style.transition = 'opacity 0.3s ease-in-out';
-          }, 10);
-          
-          // Remove the notification after a delay with fade-out
-          setTimeout(() => {
-            notificationEl.style.opacity = '0';
-            setTimeout(() => {
-              if (targetDiv.contains(notificationEl)) {
-                targetDiv.removeChild(notificationEl);
+          try {
+            // Show a small icon notification in the top left corner
+            const notificationEl = document.createElement('div');
+            notificationEl.className = 'absolute top-2 left-2 bg-green-500 text-white rounded-full p-1 z-10 opacity-0 transition-opacity';
+            notificationEl.style.display = 'flex';
+            notificationEl.style.alignItems = 'center';
+            notificationEl.style.justifyContent = 'center';
+            notificationEl.style.width = '24px';
+            notificationEl.style.height = '24px';
+            
+            // Use React to render the icon
+            const iconContainer = document.createElement('div');
+            // This is a workaround as we can't directly render React components here
+            // Create an SVG that matches the MdCheck icon
+            iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+            </svg>`;
+            notificationEl.appendChild(iconContainer.firstChild!);
+            
+            // Ensure position is relative before appending
+            if (targetDiv) {
+              // Get the content div (which is the first div child of targetDiv)
+              const contentDiv = targetDiv.querySelector('div');
+              if (contentDiv) {
+                if (getComputedStyle(contentDiv).position === 'static') {
+                  contentDiv.style.position = 'relative';
+                }
+                contentDiv.appendChild(notificationEl);
+                
+                // Add fade-in effect
+                setTimeout(() => {
+                  notificationEl.style.opacity = '1';
+                  notificationEl.style.transition = 'opacity 0.2s ease-in-out';
+                }, 10);
+                
+                // Remove the notification after a delay with fade-out
+                setTimeout(() => {
+                  notificationEl.style.opacity = '0';
+                  setTimeout(() => {
+                    if (contentDiv && contentDiv.contains(notificationEl)) {
+                      contentDiv.removeChild(notificationEl);
+                    }
+                  }, 200); // Wait for fade out animation
+                }, 1500);
               }
-            }, 300); // Wait for fade out animation
-          }, 1500);
+            }
+          } catch (err) {
+            console.error('Error showing notification:', err);
+          }
         })
         .catch(err => {
           console.error('Failed to copy text: ', err);
@@ -374,13 +391,15 @@ export default function HomePage() {
         </div>
         
         <div 
-          onClick={handleCopyPrompt} 
           className="block group cursor-pointer"
+          onClick={handleCopyPrompt}
         >
           <div className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border relative">
             {prompt.content}
-            <div className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-700 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-              Click to copy
+            <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MdContentCopy 
+                className="h-4 w-4"
+              />
             </div>
           </div>
         </div>
