@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+
+// Add Material Design icons
+import { MdSearch, MdClose, MdAutoFixHigh } from "react-icons/md";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 // Initial example prompts
@@ -356,21 +360,10 @@ export default function HomePage() {
               className="flex items-center text-sm text-blue-600 cursor-pointer hover:text-blue-800 mt-1"
               onClick={() => setActiveTag(null)}
             >
-              <svg 
+              <MdClose 
                 className="mr-1" 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="14" 
-                height="14" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+                size={14}
+              />
               <span>Clear filter</span>
             </div>
           </div>
@@ -387,19 +380,9 @@ export default function HomePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <svg 
+              <MdSearch
                 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
+              />
             </div>
             
             <input
@@ -446,28 +429,7 @@ export default function HomePage() {
                         className="flex-1 bg-white font-mono"
                       />
                       <Button variant="outline" size="default" className="whitespace-nowrap">
-                        <svg 
-                          className="h-4 w-4 mr-1.5" 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          width="24" 
-                          height="24" 
-                          viewBox="0 0 24 24" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2" 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round"
-                        >
-                          <path d="M15 4V2" />
-                          <path d="M15 16v-2" />
-                          <path d="M8 9h2" />
-                          <path d="M20 9h2" />
-                          <path d="M17.7 11.7l1.5-1.5" />
-                          <path d="M15 9h0" />
-                          <path d="M17.7 6.3l1.5 1.5" />
-                          <path d="M3 21l9-9" />
-                          <path d="M12.2 12.2 6 6" />
-                        </svg>
+                        <MdAutoFixHigh className="h-4 w-4 mr-1.5" />
                         Generate Prompt
                       </Button>
                     </div>
@@ -490,20 +452,9 @@ export default function HomePage() {
                             className="ml-1 text-gray-500 hover:opacity-80"
                             onClick={() => removeTag(tag)}
                           >
-                            <svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              width="12" 
-                              height="12" 
-                              viewBox="0 0 24 24" 
-                              fill="none" 
-                              stroke="currentColor" 
-                              strokeWidth="2" 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round"
-                            >
-                              <line x1="18" y1="6" x2="6" y2="18"></line>
-                              <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
+                            <MdClose
+                              size={12}
+                            />
                           </button>
                         </div>
                       );
