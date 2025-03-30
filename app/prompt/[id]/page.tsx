@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 
 interface Prompt {
@@ -15,7 +14,6 @@ interface Prompt {
 export default function PromptDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
-  const [remixContent, setRemixContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
@@ -27,7 +25,6 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
         const foundPrompt = allPrompts.find(p => p.id === params.id);
         if (foundPrompt) {
           setPrompt(foundPrompt);
-          setRemixContent(foundPrompt.content);
           
           // Generate mock tags for the prompt
           setTags(getTagsForPrompt(foundPrompt));
@@ -43,12 +40,13 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
     }
   }, [params.id, router]);
 
-  const handleSubmitRemix = () => {
-    if (!prompt || !remixContent.trim()) return;
+  // Handling the remix function
+  const handleRemix = () => {
+    if (!prompt) return;
     
     try {
-      // Store the remix content in sessionStorage temporarily
-      sessionStorage.setItem("remixPromptContent", remixContent);
+      // Store the original content in sessionStorage temporarily
+      sessionStorage.setItem("remixPromptContent", prompt.content);
       sessionStorage.setItem("remixPromptTitle", `${prompt.title} (Remix)`);
       // Also store the tags from the original prompt
       sessionStorage.setItem("remixPromptTags", JSON.stringify(tags));
@@ -135,7 +133,34 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
         </Link>
         
         <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h1 className="text-2xl font-semibold mb-4">{prompt.title}</h1>
+          <div className="flex justify-between items-start mb-4">
+            <h1 className="text-2xl font-semibold">{prompt.title}</h1>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRemix}
+              className="flex items-center"
+            >
+              <svg 
+                className="h-4 w-4 mr-1.5" 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M17.5 5.5C19 7 20.5 9 21 11c-2.5.5-5 .5-8.5-1" />
+                <path d="M5.5 17.5C7 19 9 20.5 11 21c.5-2.5.5-5-1-8.5" />
+                <path d="M16.5 11.5c1 2 2 4 2 6-2 .5-5 .5-8.5-1" />
+                <path d="M18.5 5.5c-2 1-4.5 1.5-7.5 1-1.5-3-1.5-5.5-1-7.5 3 .5 5.5.5 8.5-1" />
+              </svg>
+              Remix Prompt
+            </Button>
+          </div>
           
           <div className="mb-6">
             <div className="bg-gray-50 p-6 rounded-md mb-4 font-mono whitespace-pre-wrap">
@@ -144,20 +169,6 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
             
             <div className="flex justify-end">
               {renderTags()}
-            </div>
-          </div>
-          
-          <div className="mt-8 pt-6 border-t">
-            <h2 className="text-lg font-medium mb-4">Remix Prompt</h2>
-            <Textarea
-              value={remixContent}
-              onChange={(e) => setRemixContent(e.target.value)}
-              className="min-h-48 resize-none mb-4 font-mono"
-            />
-            <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleSubmitRemix}>
-                Submit Remix
-              </Button>
             </div>
           </div>
         </div>
