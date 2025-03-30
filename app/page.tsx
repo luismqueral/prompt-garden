@@ -336,9 +336,9 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Main navigation - title on left, links on right - FULL WIDTH */}
-      <div className="bg-gray-100 px-6 py-4 flex justify-between items-center w-full">
+      <div className="bg-transparent px-6 py-4 flex justify-between items-center w-full">
         <div className="flex items-center">
           <Link href="/" className="font-bold text-xl hover:underline">🪴 Prompt Garden</Link>
           <span className="text-gray-500 ml-3 text-sm hidden sm:inline">Your collection of AI prompts</span>
