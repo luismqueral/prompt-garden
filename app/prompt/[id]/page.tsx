@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { FiShuffle, FiArrowLeft } from "react-icons/fi";
 
 interface Prompt {
   id: string;
@@ -114,21 +115,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full">
         {/* Back link - left aligned to content */}
         <Link href="/" className="flex items-center text-sm text-gray-600 hover:text-gray-800 mb-6">
-          <svg 
-            className="mr-1" 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <path d="m12 19-7-7 7-7"/>
-            <path d="M19 12H5"/>
-          </svg>
+          <FiArrowLeft className="mr-1" />
           View All Prompts
         </Link>
         
@@ -141,25 +128,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
               onClick={handleRemix}
               className="flex items-center"
             >
-              <svg 
-                className="h-4 w-4 mr-1.5" 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <path d="M18 4l3 3-3 3" />
-                <path d="M18 20l3-3-3-3" />
-                <path d="M3 7h3a4 4 0 0 1 4 4v6" />
-                <path d="M21 7h-3a4 4 0 0 0-4 4v.5" />
-                <path d="M3 17h3a4 4 0 0 0 4-4v-.5" />
-                <path d="M21 17h-3a4 4 0 0 1-4-4V7" />
-              </svg>
+              <FiShuffle className="h-4 w-4 mr-1.5" />
               Remix Prompt
             </Button>
           </div>
