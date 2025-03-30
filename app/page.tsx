@@ -41,9 +41,11 @@ export default function HomePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  const [showCategoryLinks, setShowCategoryLinks] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const titleInputRef = useRef<HTMLInputElement>(null);
   const [isRemixMode, setIsRemixMode] = useState(false);
 
   // Load prompts from localStorage on component mount
@@ -73,6 +75,7 @@ export default function HomePage() {
     const remixTitle = sessionStorage.getItem("remixPromptTitle");
     const remixTagsJson = sessionStorage.getItem("remixPromptTags");
     const shouldFocusTitle = sessionStorage.getItem("focusAndSelectTitle");
+    const shouldFocusContent = sessionStorage.getItem("focusAndSelectContent");
     
     if (remixContent) {
       setNewPromptContent(remixContent);
@@ -97,7 +100,7 @@ export default function HomePage() {
       sessionStorage.removeItem("remixPromptTitle");
       sessionStorage.removeItem("remixPromptTags");
       
-      // Keep the focus flag for the next useEffect
+      // Focus on the title input if the flag is set
       if (shouldFocusTitle) {
         // We'll use this in a separate useEffect to ensure the DOM is ready
         setTimeout(() => {
@@ -106,6 +109,17 @@ export default function HomePage() {
             titleInputRef.current.select();
           }
           sessionStorage.removeItem("focusAndSelectTitle");
+        }, 100);
+      }
+      
+      // Focus on the content textarea if the flag is set
+      if (shouldFocusContent) {
+        setTimeout(() => {
+          if (contentTextareaRef.current) {
+            contentTextareaRef.current.focus();
+            contentTextareaRef.current.select();
+          }
+          sessionStorage.removeItem("focusAndSelectContent");
         }, 100);
       }
     }
@@ -417,6 +431,7 @@ export default function HomePage() {
                   className="min-h-40 resize-none mb-4 font-mono"
                   value={newPromptContent}
                   onChange={(e) => setNewPromptContent(e.target.value)}
+                  ref={contentTextareaRef}
                 />
                 
                 {/* Generate prompt helper section - hidden when remixing */}

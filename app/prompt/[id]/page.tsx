@@ -51,8 +51,8 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       sessionStorage.setItem("remixPromptTitle", `${prompt.title} (Remix)`);
       // Also store the tags from the original prompt
       sessionStorage.setItem("remixPromptTags", JSON.stringify(tags));
-      // Set a flag to focus and select the title input
-      sessionStorage.setItem("focusAndSelectTitle", "true");
+      // Set a flag to focus and select the content textarea instead of the title
+      sessionStorage.setItem("focusAndSelectContent", "true");
       
       // Navigate to create page
       router.push("/?view=create");
