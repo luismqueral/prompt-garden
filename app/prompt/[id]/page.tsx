@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { FiShuffle, FiArrowLeft } from "react-icons/fi";
+import { MdShuffle, MdArrowBack } from "react-icons/md";
 
 interface Prompt {
   id: string;
@@ -115,7 +115,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full">
         {/* Back link - left aligned to content */}
         <Link href="/" className="flex items-center text-sm text-gray-600 hover:text-gray-800 mb-6">
-          <FiArrowLeft className="mr-1" />
+          <MdArrowBack className="mr-1" />
           View All Prompts
         </Link>
         
@@ -128,7 +128,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
               onClick={handleRemix}
               className="flex items-center"
             >
-              <FiShuffle className="h-4 w-4 mr-1.5" />
+              <MdShuffle className="h-4 w-4 mr-1.5" />
               Remix Prompt
             </Button>
           </div>
