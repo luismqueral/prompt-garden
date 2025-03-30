@@ -325,9 +325,9 @@ export default function HomePage() {
       navigator.clipboard.writeText(prompt.content)
         .then(() => {
           try {
-            // Show a small icon notification in the top left corner
+            // Show a small icon notification in the top right corner
             const notificationEl = document.createElement('div');
-            notificationEl.className = 'absolute top-2 left-2 bg-green-500 text-white rounded-full p-1 z-10 opacity-0 transition-opacity';
+            notificationEl.className = 'absolute top-2 right-2 bg-green-500 text-white rounded-full p-1 z-10 opacity-0 transition-opacity';
             notificationEl.style.display = 'flex';
             notificationEl.style.alignItems = 'center';
             notificationEl.style.justifyContent = 'center';
