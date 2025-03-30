@@ -44,6 +44,7 @@ export default function HomePage() {
   const [showCategoryLinks, setShowCategoryLinks] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [isRemixMode, setIsRemixMode] = useState(false);
@@ -131,6 +132,16 @@ export default function HomePage() {
       localStorage.setItem("promptGardenPrompts", JSON.stringify(prompts));
     }
   }, [prompts, isLoaded]);
+
+  // Focus search input when browse view is active
+  useEffect(() => {
+    if (isLoaded && activeView === "browse" && !activeTag && searchInputRef.current) {
+      // Small delay to ensure the DOM is fully ready
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isLoaded, activeView, activeTag]);
 
   // Add a new prompt
   const addNewPrompt = () => {
@@ -393,6 +404,7 @@ export default function HomePage() {
                 className="pl-10 py-6 font-mono bg-white"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                ref={searchInputRef}
               />
               <MdSearch
                 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" 
