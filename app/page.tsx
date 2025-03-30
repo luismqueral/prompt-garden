@@ -311,19 +311,79 @@ export default function HomePage() {
     // Get tags for this prompt
     const tags = getTagsForPrompt(prompt);
     
+    // Function to handle copying prompt to clipboard
+    const handleCopyPrompt = (e: React.MouseEvent) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(prompt.content)
+        .then(() => {
+          // Show a temporary tooltip or notification
+          const targetDiv = e.currentTarget as HTMLElement;
+          const notificationEl = document.createElement('div');
+          notificationEl.className = 'absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-70 text-white rounded-md transition-opacity';
+          
+          // Create an inner container for better styling
+          const innerContainer = document.createElement('div');
+          innerContainer.className = 'bg-blue-600 px-4 py-2 rounded-md flex items-center shadow-lg';
+          
+          // Add checkmark icon or text
+          const iconSpan = document.createElement('span');
+          iconSpan.className = 'mr-2';
+          iconSpan.textContent = '✓';
+          
+          const textSpan = document.createElement('span');
+          textSpan.textContent = 'Copied to clipboard!';
+          
+          innerContainer.appendChild(iconSpan);
+          innerContainer.appendChild(textSpan);
+          notificationEl.appendChild(innerContainer);
+          
+          targetDiv.style.position = 'relative';
+          targetDiv.appendChild(notificationEl);
+          
+          // Add fade-in effect
+          notificationEl.style.opacity = '0';
+          setTimeout(() => {
+            notificationEl.style.opacity = '1';
+            notificationEl.style.transition = 'opacity 0.3s ease-in-out';
+          }, 10);
+          
+          // Remove the notification after a delay with fade-out
+          setTimeout(() => {
+            notificationEl.style.opacity = '0';
+            setTimeout(() => {
+              if (targetDiv.contains(notificationEl)) {
+                targetDiv.removeChild(notificationEl);
+              }
+            }, 300); // Wait for fade out animation
+          }, 1500);
+        })
+        .catch(err => {
+          console.error('Failed to copy text: ', err);
+        });
+    };
+    
     return (
       <div key={prompt.id} className="mb-8 bg-white p-5 rounded-lg border border-gray-100 shadow-sm">
         <div className="mb-3">
           <Link href={`/prompt/${prompt.id}`} className="group">
-            <h3 className="text-base font-medium group-hover:text-blue-600 transition-colors">{prompt.title}</h3>
+            <h3 className="text-base font-medium group-hover:text-blue-600 transition-colors flex items-center">
+              {prompt.title}
+              <span className="ml-1 text-xs text-gray-400 group-hover:text-blue-400">(view details)</span>
+            </h3>
           </Link>
         </div>
         
-        <Link href={`/prompt/${prompt.id}`} className="block group">
-          <div className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border">
+        <div 
+          onClick={handleCopyPrompt} 
+          className="block group cursor-pointer"
+        >
+          <div className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border relative">
             {prompt.content}
+            <div className="absolute right-2 top-2 text-xs px-2 py-1 bg-gray-700 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+              Click to copy
+            </div>
           </div>
-        </Link>
+        </div>
         
         <div className="flex justify-end">
           <div className="flex flex-wrap gap-1 justify-end">
