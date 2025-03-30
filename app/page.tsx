@@ -309,7 +309,7 @@ export default function HomePage() {
         </div>
         
         <Link href={`/prompt/${prompt.id}`} className="block group">
-          <div className="bg-gray-50 p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-3">
+          <div className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border">
             {prompt.content}
           </div>
         </Link>
