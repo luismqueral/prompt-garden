@@ -134,7 +134,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
           </div>
           
           <div className="mb-6">
-            <div className="bg-gray-50 p-6 rounded-md mb-4 font-mono whitespace-pre-wrap">
+            <div className="bg-white p-6 rounded-md mb-4 font-mono whitespace-pre-wrap border">
               {prompt.content}
             </div>
             

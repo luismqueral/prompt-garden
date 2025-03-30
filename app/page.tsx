@@ -390,7 +390,7 @@ export default function HomePage() {
               <Input 
                 type="text" 
                 placeholder="Search prompts..." 
-                className="pl-10 py-6 font-mono"
+                className="pl-10 py-6 font-mono bg-white"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -419,7 +419,7 @@ export default function HomePage() {
                 <label className="block text-sm font-medium mb-2">Prompt Title</label>
                 <Input 
                   placeholder="Enter prompt title..."
-                  className="text-xl font-semibold mb-4 focus-visible:ring-blue-500 font-mono"
+                  className="text-xl font-semibold mb-4 focus-visible:ring-blue-500 font-mono bg-white"
                   value={newPromptTitle}
                   onChange={(e) => setNewPromptTitle(e.target.value)}
                   ref={titleInputRef}
@@ -428,7 +428,7 @@ export default function HomePage() {
                 <label className="block text-sm font-medium mb-2">Prompt Content</label>
                 <Textarea
                   placeholder="Enter your prompt content here..."
-                  className="min-h-40 resize-none mb-4 font-mono"
+                  className="min-h-40 resize-none mb-4 font-mono bg-white"
                   value={newPromptContent}
                   onChange={(e) => setNewPromptContent(e.target.value)}
                   ref={contentTextareaRef}
