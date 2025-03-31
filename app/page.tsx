@@ -383,7 +383,7 @@ export default function HomePage() {
       <div key={prompt.id} className="mb-8 bg-white p-5 rounded-lg border border-gray-100 shadow-sm">
         <div className="mb-3">
           <Link href={`/prompt/${prompt.id}`} className="group">
-            <h3 className="text-base font-medium group-hover:text-blue-600 transition-colors underline">
+            <h3 className="text-base font-medium group-hover:text-blue-600 group-hover:underline transition-colors">
               {prompt.title}
             </h3>
           </Link>
