@@ -448,7 +448,7 @@ export default function HomePage() {
             className="text-sm"
             onClick={() => setActiveView("create")}
           >
-            Create Prompt
+            Add Prompt
           </Button>
         </div>
       </div>
@@ -504,7 +504,7 @@ export default function HomePage() {
             ? filteredPrompts.map(prompt => renderPrompt(prompt))
             : activeView === "create" && (
               <div>
-                <h1 className="text-2xl font-bold mb-6 text-center">Create New Prompt</h1>
+                <h1 className="text-2xl font-bold mb-6 text-center">Add New Prompt</h1>
                 
                 <label className="block text-sm font-medium mb-2">Prompt Title</label>
                 <Input 
@@ -599,7 +599,7 @@ export default function HomePage() {
                     Cancel
                   </Button>
                   <Button onClick={addNewPrompt}>
-                    {isRemixMode ? "Save Remix" : "Create Prompt"}
+                    {isRemixMode ? "Save Remix" : "Add Prompt"}
                   </Button>
                 </div>
               </div>
