@@ -134,23 +134,36 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
   
   // Helper function to process context annotations within a section
   const processContextAnnotations = (text: string): string => {
-    // We'll replace context tags with invisible markers for rendering
-    return text.replace(/<context>([\s\S]*?)<\/context>/g, (match, contextContent) => {
-      // Store context content in a data attribute that we can use during rendering
-      return `{{CONTEXT_START}}${contextContent}{{CONTEXT_END}}`;
+    // Process context tags with careful handling of whitespace
+    return text.replace(/<context>([\s\S]*?)<\/context>/g, (match, contextContent, offset, fullText) => {
+      const prevChar = offset > 0 ? fullText[offset - 1] : '';
+      const nextChar = offset + match.length < fullText.length ? fullText[offset + match.length] : '';
+      
+      // Check if the context tag is surrounded by newlines
+      const isInOwnParagraph = 
+        (prevChar === '\n' || offset === 0) && 
+        (nextChar === '\n' || offset + match.length === fullText.length);
+      
+      // If it's in its own paragraph, don't add extra spaces
+      if (isInOwnParagraph) {
+        return `{{CONTEXT_START}}${contextContent.trim()}{{CONTEXT_END}}`;
+      }
+      
+      // Otherwise, insert it inline with appropriate spacing
+      return `{{CONTEXT_START}}${contextContent.trim()}{{CONTEXT_END}}`;
     });
   };
   
   // Render a regular prompt section with context annotations
   const renderRegularSection = (content: string, index: number) => {
     // Split the content by context markers
-    const parts = content.split(/{{CONTEXT_START}}|{{CONTEXT_END}}/);
+    const parts = content.split(/\{\{CONTEXT_START\}\}|\{\{CONTEXT_END\}\}/);
     const result: React.ReactNode[] = [];
     
     parts.forEach((part, i) => {
       if (i % 2 === 0) {
         // Regular content
-        if (part.trim()) {
+        if (part) {
           result.push(
             <span key={`${index}-${i}`} className="block">{part}</span>
           );
@@ -170,7 +183,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       <div 
         key={index}
         className="bg-white p-4 rounded-md my-3 font-mono whitespace-pre-wrap border relative group cursor-pointer"
-        onClick={(e) => handleCopyPrompt(content.replace(/{{CONTEXT_START}}[\s\S]*?{{CONTEXT_END}}/g, ''), e)}
+        onClick={(e) => handleCopyPrompt(content.replace(/\{\{CONTEXT_START\}\}[\s\S]*?\{\{CONTEXT_END\}\}/g, ''), e)}
       >
         {result}
         <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">

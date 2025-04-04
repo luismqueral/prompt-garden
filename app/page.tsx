@@ -308,11 +308,16 @@ export default function HomePage() {
 
   // Helper function to strip special tags for preview display
   const stripSpecialTags = (content: string): string => {
-    // Remove context tags
+    // Remove context tags without leaving extra whitespace
     let result = content.replace(/<context>[\s\S]*?<\/context>/g, '');
-    // Remove follow-up tags
+    
+    // Remove follow-up tags and all content within them
     result = result.replace(/<follow-up>[\s\S]*?<\/follow-up>/g, '');
-    return result;
+    
+    // Clean up any double line breaks that might have been created
+    result = result.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    return result.trim();
   };
 
   // Helper function to render a prompt
