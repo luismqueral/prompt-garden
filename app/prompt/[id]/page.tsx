@@ -150,40 +150,78 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       }
       
       // Otherwise, insert it inline with appropriate spacing
-      return `{{CONTEXT_START}}${contextContent.trim()}{{CONTEXT_END}}`;
+      return ` {{CONTEXT_START}}${contextContent.trim()}{{CONTEXT_END}} `;
     });
   };
   
   // Render a regular prompt section with context annotations
   const renderRegularSection = (content: string, index: number) => {
-    // Split the content by context markers
-    const parts = content.split(/\{\{CONTEXT_START\}\}|\{\{CONTEXT_END\}\}/);
-    const result: React.ReactNode[] = [];
+    // Create a copy of the content for display to remove the context markers
+    const displayContent = content.replace(/\{\{CONTEXT_START\}\}([\s\S]*?)\{\{CONTEXT_END\}\}/g, '');
     
-    parts.forEach((part, i) => {
-      if (i % 2 === 0) {
-        // Regular content
-        if (part) {
-          result.push(
-            <span key={`${index}-${i}`} className="block">{part}</span>
-          );
-        }
-      } else {
-        // Context annotation
+    // For this regex split, we need to escape the braces properly and use String.raw
+    const contextRegex = String.raw`\{\{CONTEXT_START\}\}([\s\S]*?)\{\{CONTEXT_END\}\}`;
+    const contextMatches = Array.from(content.matchAll(new RegExp(contextRegex, 'g')));
+    
+    // If no context annotations, just display the content normally
+    if (contextMatches.length === 0) {
+      return (
+        <div 
+          key={index}
+          className="bg-white p-4 rounded-md my-3 font-mono whitespace-pre-wrap border relative group cursor-pointer"
+          onClick={(e) => handleCopyPrompt(displayContent, e)}
+        >
+          <div>{displayContent}</div>
+          <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <MdContentCopy className="h-4 w-4" />
+          </div>
+        </div>
+      );
+    }
+    
+    // Reconstruct the content with context notes
+    const result: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    // Add the main content with context notes interspersed
+    contextMatches.forEach((match, matchIndex) => {
+      const [fullMatch, contextContent] = match;
+      const matchStart = match.index || 0;
+      
+      // Add content before this context note
+      if (matchStart > lastIndex) {
         result.push(
-          <span key={`${index}-${i}`} className="bg-gray-100 text-gray-600 italic text-sm px-2 py-1 ml-2 rounded inline-block">
-            <span className="text-xs uppercase text-gray-500 font-medium mr-1">Note:</span>
-            {part}
+          <span key={`${index}-text-${matchIndex}`} className="block">
+            {content.substring(lastIndex, matchStart)}
           </span>
         );
       }
+      
+      // Add the context note
+      result.push(
+        <span key={`${index}-context-${matchIndex}`} className="bg-gray-100 text-gray-600 italic text-sm px-2 py-1 ml-2 rounded inline-block">
+          <span className="text-xs uppercase text-gray-500 font-medium mr-1">Note:</span>
+          {contextContent.trim()}
+        </span>
+      );
+      
+      lastIndex = matchStart + fullMatch.length;
     });
+    
+    // Add any remaining content after the last context note
+    if (lastIndex < content.length) {
+      result.push(
+        <span key={`${index}-text-last`} className="block">
+          {content.substring(lastIndex)}
+        </span>
+      );
+    }
     
     return (
       <div 
         key={index}
         className="bg-white p-4 rounded-md my-3 font-mono whitespace-pre-wrap border relative group cursor-pointer"
-        onClick={(e) => handleCopyPrompt(content.replace(/\{\{CONTEXT_START\}\}[\s\S]*?\{\{CONTEXT_END\}\}/g, ''), e)}
+        onClick={(e) => handleCopyPrompt(displayContent, e)}
       >
         {result}
         <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -204,7 +242,14 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       return;
     }
     
-    navigator.clipboard.writeText(text)
+    // Clean the text by removing any remaining context markers
+    const cleanedText = text
+      .replace(/\{\{CONTEXT_START\}\}[\s\S]*?\{\{CONTEXT_END\}\}/g, '')
+      .replace(/<context>[\s\S]*?<\/context>/g, '')
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .trim();
+      
+    navigator.clipboard.writeText(cleanedText)
       .then(() => {
         try {
           // Show a small icon notification in the top right corner
@@ -334,18 +379,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       
       case 'regular':
       default:
-        return (
-          <div 
-            key={index}
-            className="bg-white p-4 rounded-md my-3 font-mono whitespace-pre-wrap border relative group cursor-pointer"
-            onClick={(e) => handleCopyPrompt(section.content, e)}
-          >
-            {section.content}
-            <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MdContentCopy className="h-4 w-4" />
-            </div>
-          </div>
-        );
+        return renderRegularSection(section.content, index);
     }
   };
 

@@ -311,6 +311,9 @@ export default function HomePage() {
     // Remove context tags without leaving extra whitespace
     let result = content.replace(/<context>[\s\S]*?<\/context>/g, '');
     
+    // Remove any context markers that might have been inserted
+    result = result.replace(/\{\{CONTEXT_START\}\}[\s\S]*?\{\{CONTEXT_END\}\}/g, '');
+    
     // Remove follow-up tags and all content within them
     result = result.replace(/<follow-up>[\s\S]*?<\/follow-up>/g, '');
     
