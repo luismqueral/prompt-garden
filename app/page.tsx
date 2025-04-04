@@ -306,6 +306,15 @@ export default function HomePage() {
     return matchesSearch && matchesTag;
   });
 
+  // Helper function to strip special tags for preview display
+  const stripSpecialTags = (content: string): string => {
+    // Remove context tags
+    let result = content.replace(/<context>[\s\S]*?<\/context>/g, '');
+    // Remove follow-up tags
+    result = result.replace(/<follow-up>[\s\S]*?<\/follow-up>/g, '');
+    return result;
+  };
+
   // Helper function to render a prompt
   function renderPrompt(prompt: (typeof initialPrompts)[0]) {
     // Get tags for this prompt
@@ -322,7 +331,8 @@ export default function HomePage() {
         return;
       }
       
-      navigator.clipboard.writeText(prompt.content)
+      // Copy the prompt content to clipboard, stripping context tags
+      navigator.clipboard.writeText(stripSpecialTags(prompt.content))
         .then(() => {
           try {
             // Show a small icon notification in the top right corner
@@ -394,7 +404,7 @@ export default function HomePage() {
           onClick={handleCopyPrompt}
         >
           <div className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border relative">
-            {prompt.content}
+            {stripSpecialTags(prompt.content)}
             <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
               <MdContentCopy 
                 className="h-4 w-4"

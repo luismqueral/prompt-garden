@@ -60,71 +60,124 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
     const contextRegex = /<context>([\s\S]*?)<\/context>/g;
     const followUpRegex = /<follow-up>([\s\S]*?)<\/follow-up>/g;
     
-    // Create a copy of the content to work with
-    let remainingContent = content;
-    let lastIndex = 0;
+    // First, extract the follow-up sections (these should be completely separate)
+    const followUpSections: {start: number; end: number; content: string; index: number}[] = [];
     let followUpCount = 0;
-    
-    // Find all special sections and their positions
-    const specialSections: {start: number; end: number; content: string; type: 'context' | 'follow-up'; index?: number}[] = [];
-    
-    // Find context sections
-    let contextMatch;
-    while ((contextMatch = contextRegex.exec(content)) !== null) {
-      specialSections.push({
-        start: contextMatch.index,
-        end: contextMatch.index + contextMatch[0].length,
-        content: contextMatch[1],
-        type: 'context'
-      });
-    }
-    
-    // Find follow-up sections
     let followUpMatch;
+    
     while ((followUpMatch = followUpRegex.exec(content)) !== null) {
       followUpCount++;
-      specialSections.push({
+      followUpSections.push({
         start: followUpMatch.index,
         end: followUpMatch.index + followUpMatch[0].length,
         content: followUpMatch[1],
-        type: 'follow-up',
         index: followUpCount
       });
     }
     
-    // Sort sections by their starting position
-    specialSections.sort((a, b) => a.start - b.start);
-    
-    // Process the content in order
-    lastIndex = 0;
-    for (const section of specialSections) {
-      // Add regular content before this special section
-      if (section.start > lastIndex) {
-        sections.push({
-          type: 'regular',
-          content: content.substring(lastIndex, section.start)
-        });
-      }
+    // If there are follow-up sections, split the content at these points
+    if (followUpSections.length > 0) {
+      // Sort by position
+      followUpSections.sort((a, b) => a.start - b.start);
       
-      // Add the special section
-      sections.push({
-        type: section.type,
-        content: section.content,
-        index: section.index
-      });
+      // Get the main content (everything before the first follow-up)
+      const mainContent = content.substring(0, followUpSections[0].start);
       
-      lastIndex = section.end;
-    }
-    
-    // Add any remaining regular content
-    if (lastIndex < content.length) {
+      // Add main content section with context annotations
       sections.push({
         type: 'regular',
-        content: content.substring(lastIndex)
+        content: processContextAnnotations(mainContent)
+      });
+      
+      // Add follow-up sections
+      followUpSections.forEach((section, i) => {
+        sections.push({
+          type: 'follow-up',
+          content: section.content.trim(),
+          index: section.index
+        });
+        
+        // If there's content between this follow-up and the next one, add it
+        if (i < followUpSections.length - 1) {
+          const betweenContent = content.substring(
+            section.end,
+            followUpSections[i + 1].start
+          );
+          
+          if (betweenContent.trim()) {
+            sections.push({
+              type: 'regular',
+              content: processContextAnnotations(betweenContent)
+            });
+          }
+        }
+      });
+      
+      // Add any remaining content after the last follow-up
+      const afterLastFollowUp = content.substring(followUpSections[followUpSections.length - 1].end);
+      if (afterLastFollowUp.trim()) {
+        sections.push({
+          type: 'regular',
+          content: processContextAnnotations(afterLastFollowUp)
+        });
+      }
+    } else {
+      // No follow-ups, just process the whole content for context annotations
+      sections.push({
+        type: 'regular',
+        content: processContextAnnotations(content)
       });
     }
     
     return sections;
+  };
+  
+  // Helper function to process context annotations within a section
+  const processContextAnnotations = (text: string): string => {
+    // We'll replace context tags with invisible markers for rendering
+    return text.replace(/<context>([\s\S]*?)<\/context>/g, (match, contextContent) => {
+      // Store context content in a data attribute that we can use during rendering
+      return `{{CONTEXT_START}}${contextContent}{{CONTEXT_END}}`;
+    });
+  };
+  
+  // Render a regular prompt section with context annotations
+  const renderRegularSection = (content: string, index: number) => {
+    // Split the content by context markers
+    const parts = content.split(/{{CONTEXT_START}}|{{CONTEXT_END}}/);
+    const result: React.ReactNode[] = [];
+    
+    parts.forEach((part, i) => {
+      if (i % 2 === 0) {
+        // Regular content
+        if (part.trim()) {
+          result.push(
+            <span key={`${index}-${i}`} className="block">{part}</span>
+          );
+        }
+      } else {
+        // Context annotation
+        result.push(
+          <span key={`${index}-${i}`} className="bg-gray-100 text-gray-600 italic text-sm px-2 py-1 ml-2 rounded inline-block">
+            <span className="text-xs uppercase text-gray-500 font-medium mr-1">Note:</span>
+            {part}
+          </span>
+        );
+      }
+    });
+    
+    return (
+      <div 
+        key={index}
+        className="bg-white p-4 rounded-md my-3 font-mono whitespace-pre-wrap border relative group cursor-pointer"
+        onClick={(e) => handleCopyPrompt(content.replace(/{{CONTEXT_START}}[\s\S]*?{{CONTEXT_END}}/g, ''), e)}
+      >
+        {result}
+        <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          <MdContentCopy className="h-4 w-4" />
+        </div>
+      </div>
+    );
   };
 
   // Function to handle copying prompt sections to clipboard
@@ -249,17 +302,6 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
   // Render a prompt section based on its type
   const renderPromptSection = (section: ParsedPromptSection, index: number) => {
     switch (section.type) {
-      case 'context':
-        return (
-          <div 
-            key={index}
-            className="bg-gray-100 p-3 rounded-md my-3 border border-gray-200"
-          >
-            <div className="text-xs uppercase text-gray-500 mb-1 font-medium">Context Note:</div>
-            <div className="text-gray-600 italic text-sm">{section.content}</div>
-          </div>
-        );
-      
       case 'follow-up':
         return (
           <div 
