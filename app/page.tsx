@@ -16,11 +16,15 @@ import { Extension } from '@codemirror/state';
 import { Compartment } from '@codemirror/state';
 import { lineNumbers } from '@codemirror/view';
 import { gutters } from '@codemirror/view';
+import { StreamLanguage } from '@codemirror/language';
+import { languages } from '@codemirror/language-data';
+import { createTheme } from '@uiw/codemirror-themes';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
+import { Header } from "@/components/header";
 
 // Initial example prompts
 const initialPrompts = [
@@ -511,6 +515,48 @@ To create follow-up prompts that will display with circle indicators:
       }, 100);
     }
   }, [isLoaded, activeView, activeTag]);
+
+  // Check for URL params on mount to set the correct view
+  useEffect(() => {
+    const handleURLParams = () => {
+      // Check if we're in a browser environment
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search);
+        const viewParam = searchParams.get('view');
+        
+        if (viewParam === 'create') {
+          setActiveView('create');
+        } else {
+          setActiveView('browse');
+        }
+      }
+    };
+    
+    handleURLParams();
+    
+    // Also listen for popstate events (browser back/forward)
+    window.addEventListener('popstate', handleURLParams);
+    
+    return () => {
+      window.removeEventListener('popstate', handleURLParams);
+    };
+  }, []);
+  
+  // Update URL when activeView changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      
+      if (activeView === 'create') {
+        url.searchParams.set('view', 'create');
+      } else {
+        url.searchParams.delete('view');
+      }
+      
+      // Update URL without a full page reload
+      window.history.pushState({}, '', url);
+    }
+  }, [activeView]);
 
   // Add a new prompt
   const addNewPrompt = () => {
@@ -1163,33 +1209,14 @@ To create follow-up prompts that will display with circle indicators:
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
-      {/* Main navigation - title on left, links on right - FULL WIDTH */}
-      <div className="bg-transparent px-6 py-4 flex justify-between items-center w-full">
-        <div className="flex items-center">
-          <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold">🪴</span>
-            <span className="text-xl font-bold hover:underline">Prompt Garden</span>
-            <span className="text-gray-500 ml-3 text-sm hidden sm:inline">An assorted collection of LMM prompts</span>
-          </Link>
-        </div>
-        <div className="flex space-x-4 items-center">
-          <Link href="/" className="text-gray-800 hover:underline">
-            Browse All Prompts
-          </Link>
-          <Link href="/tips" className="text-gray-800 hover:underline">
-            Prompting Tips
-          </Link>
-          <button
-            onClick={() => setActiveView("create")}
-            className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium"
-          >
-            + Add Prompt
-          </button>
-        </div>
-      </div>
+      {/* Main navigation - transparent header bar */}
+      <Header 
+        onAddPromptClick={() => setActiveView("create")}
+        isCreateView={activeView === "create"}
+      />
       
       {/* Content area - LIMITED WIDTH - increased for create view */}
-      <div className={`px-6 py-8 flex-1 mx-auto ${activeView === "create" ? "max-w-5xl" : "max-w-2xl"} w-full`}>
+      <div className={`px-6 py-8 flex-1 mx-auto ${activeView === "create" ? "max-w-3xl" : "max-w-2xl"} w-full`}>
         {/* Filter indicator - only shown when a tag is active */}
         {activeView === "browse" && activeTag && (
           <div className={`mb-6 p-4 rounded-lg ${
