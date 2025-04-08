@@ -13,12 +13,33 @@ An assorted collection of LMM prompts for various use cases. Browse, create, and
   - Context notes for providing additional information
 - **Tagging System**: Organize prompts with tags and categories
 - **Keyboard Shortcuts**: Use Cmd+Enter (or Ctrl+Enter) to quickly submit prompts
+- **Google Sheets Integration**: Store all prompts in a Google Sheet for easy sharing and editing
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ and npm
+- Google Cloud Platform account (for Google Sheets API)
+
+### Setting up Google Sheets
+
+1. Create a new Google Sheet in your Google Drive
+2. Create a service account in Google Cloud Platform:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Navigate to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "Service Account"
+   - Fill in the details and create the service account
+   - Generate a new key (JSON format) for the service account
+3. Share your Google Sheet with the service account email (with Editor permissions)
+4. Enable Google Sheets API for your project in Google Cloud Console
+5. Copy the values from your service account key JSON file to your `.env.local` file:
+   ```
+   GOOGLE_SHEET_ID=your_google_sheet_id_here
+   GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email@example.com
+   GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour_Private_Key_Here\n-----END PRIVATE KEY-----\n"
+   ```
 
 ### Installation
 
@@ -33,12 +54,16 @@ An assorted collection of LMM prompts for various use cases. Browse, create, and
    npm install
    ```
 
-3. Start the development server:
+3. Create a `.env.local` file with your Google Sheets credentials (see `.env.local.example` for reference)
+
+4. Start the development server:
    ```bash
    npm run dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+
+6. Initialize the Google Sheets database by navigating to `/admin` in your browser and clicking the "Initialize Database" button.
 
 ## Usage Guide
 
@@ -64,6 +89,7 @@ An assorted collection of LMM prompts for various use cases. Browse, create, and
 - React
 - TailwindCSS
 - CodeMirror for the prompt editor
+- Google Sheets API for data storage
 
 ## Contributing
 
