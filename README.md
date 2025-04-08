@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🪴 Prompt Garden
+
+An assorted collection of LMM prompts for various use cases. Browse, create, and share effective prompts for AI language models.
+
+## Features
+
+- **Browse Prompts**: Explore a curated collection of effective prompts
+- **Create Prompts**: Add your own prompts with a user-friendly editor
+- **Remix Existing Prompts**: Build upon others' work to create variations
+- **Rich Formatting**:
+  - Variables in `[brackets]` are automatically styled
+  - Support for follow-up prompts with visual indicators
+  - Context notes for providing additional information
+- **Tagging System**: Organize prompts with tags and categories
+- **Keyboard Shortcuts**: Use Cmd+Enter (or Ctrl+Enter) to quickly submit prompts
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18+ and npm
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/luismqueral/prompt-garden.git
+   cd prompt-garden
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Learn More
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage Guide
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Creating Prompts
 
-## Deploy on Vercel
+1. Click the "+ Add Prompt" button in the header
+2. Enter your prompt content in the editor
+3. Use special syntax for enhanced formatting:
+   - `[VARIABLE]` for variables (displayed in uppercase)
+   - `> Note` for context notes (not visible on homepage cards)
+   - `1. Follow-up` for follow-up prompts (with circle indicators)
+4. Add relevant tags and categories
+5. Click "Add Prompt" or use Cmd+Enter (Ctrl+Enter on Windows/Linux)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Editing and Remixing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Click on any prompt card to view details
+- Click "Remix Prompt" to create your own version
+
+## Technologies
+
+- Next.js 15+
+- React
+- TailwindCSS
+- CodeMirror for the prompt editor
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
