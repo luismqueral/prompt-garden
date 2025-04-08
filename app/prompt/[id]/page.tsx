@@ -634,10 +634,20 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       {/* Main navigation - transparent header bar */}
       <div className="bg-transparent px-6 py-4 flex justify-between items-center w-full">
         <div className="flex items-center">
-          <Link href="/" className="font-bold text-xl hover:underline">🪴 Prompt Garden</Link>
-          <span className="text-gray-500 ml-3 text-sm hidden sm:inline">Your collection of AI prompts</span>
+          <Link href="/" className="flex items-center">
+            <span className="text-xl font-bold">🪴</span>
+            <span className="text-xl font-bold hover:underline">Prompt Garden</span>
+            <span className="text-gray-500 ml-3 text-sm hidden sm:inline">An assorted collection of LMM prompts</span>
+          </Link>
         </div>
-        <div className="invisible">Back to Prompts</div> {/* Placeholder for balanced spacing */}
+        <div className="flex space-x-4 items-center">
+          <Link href="/" className="text-gray-800 hover:underline">
+            Browse All Prompts
+          </Link>
+          <Link href="/tips" className="text-gray-800 hover:underline">
+            Prompting Tips
+          </Link>
+        </div>
       </div>
       
       {/* Content area - LIMITED WIDTH */}

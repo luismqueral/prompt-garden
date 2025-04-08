@@ -1166,27 +1166,25 @@ To create follow-up prompts that will display with circle indicators:
       {/* Main navigation - title on left, links on right - FULL WIDTH */}
       <div className="bg-transparent px-6 py-4 flex justify-between items-center w-full">
         <div className="flex items-center">
-          <Link href="/" className="font-bold text-xl hover:underline">🪴 Prompt Garden</Link>
-          <span className="text-gray-500 ml-3 text-sm hidden sm:inline">Your collection of AI prompts</span>
+          <Link href="/" className="flex items-center">
+            <span className="text-xl font-bold">🪴</span>
+            <span className="text-xl font-bold hover:underline">Prompt Garden</span>
+            <span className="text-gray-500 ml-3 text-sm hidden sm:inline">An assorted collection of LMM prompts</span>
+          </Link>
         </div>
         <div className="flex space-x-4 items-center">
-          <button 
-            className={`px-3 py-1 text-sm transition-colors ${
-              activeView === "browse" 
-                ? "text-blue-600 font-medium hover:underline" 
-                : "text-gray-600 hover:text-gray-800 hover:underline"
-            }`}
-            onClick={() => setActiveView("browse")}
-          >
+          <Link href="/" className="text-gray-800 hover:underline">
             Browse All Prompts
-          </button>
-          <Button
-            variant={activeView === "create" ? "default" : "outline"}
-            className="text-sm"
+          </Link>
+          <Link href="/tips" className="text-gray-800 hover:underline">
+            Prompting Tips
+          </Link>
+          <button
             onClick={() => setActiveView("create")}
+            className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium"
           >
-            Add Prompt
-          </Button>
+            + Add Prompt
+          </button>
         </div>
       </div>
       
