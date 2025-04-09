@@ -787,10 +787,23 @@ To create follow-up prompts that will display with circle indicators:
     if (input.trim() !== "") {
       // Filter available tags based on input
       const allTags = getAllAvailableTags();
-      const matchedTags = allTags.filter(tag => 
-        tag.toLowerCase().includes(input.toLowerCase()) && 
-        !selectedTags.includes(tag)
-      );
+      
+      // If input starts with @, filter categories, otherwise filter regular tags
+      const isCreatingCategory = input.startsWith('@');
+      const searchTerm = isCreatingCategory ? input.substring(1).toLowerCase() : input.toLowerCase();
+      
+      // If creating a category, only show categories in suggestions
+      const matchedTags = isCreatingCategory 
+        ? allTags.filter(tag => 
+            isCategory(tag) && 
+            tag.toLowerCase().includes(searchTerm) && 
+            !selectedTags.includes(tag)
+          )
+        : allTags.filter(tag => 
+            tag.toLowerCase().includes(searchTerm) && 
+            !selectedTags.includes(tag)
+          );
+          
       setSuggestedTags(matchedTags);
     } else {
       setSuggestedTags([]);
@@ -836,7 +849,7 @@ To create follow-up prompts that will display with circle indicators:
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedSuggestionIndex(prev => {
-          const newIndex = prev > 0 ? prev - 1 : 0;
+          const newIndex = prev > 0 ? prev - 1 : prev;
           
           // Scroll the selected item into view after a short delay
           setTimeout(() => {
@@ -871,9 +884,15 @@ To create follow-up prompts that will display with circle indicators:
         
         // Otherwise use the current input
         if (tagInput.trim()) {
-          if (isCategory(tagInput.trim())) {
+          // Check if creating a category with @ prefix
+          if (tagInput.startsWith('@')) {
+            const categoryName = tagInput.substring(1).trim();
+            if (categoryName) {
+              selectCategory(categoryName);
+            }
+          } else if (isCategory(tagInput.trim())) {
             if (selectedCategory) {
-      addTag(tagInput.trim());
+              addTag(tagInput.trim());
             } else {
               selectCategory(tagInput.trim());
             }
@@ -891,7 +910,13 @@ To create follow-up prompts that will display with circle indicators:
       }
     } else if (e.key === "Enter" && tagInput.trim() !== "") {
       e.preventDefault();
-      if (isCategory(tagInput.trim())) {
+      // Check if creating a category with @ prefix
+      if (tagInput.startsWith('@')) {
+        const categoryName = tagInput.substring(1).trim();
+        if (categoryName) {
+          selectCategory(categoryName);
+        }
+      } else if (isCategory(tagInput.trim())) {
         if (selectedCategory) {
           addTag(tagInput.trim());
         } else {
@@ -1459,6 +1484,208 @@ To create follow-up prompts that will display with circle indicators:
                         </div>
                       </div>
                     )}
+                    
+                    {/* Tags & Categories Input Section */}
+                    <div className="mt-9 mb-6">
+                      <p className="text-sm font-medium mb-2">Tags & Categories</p>
+                      <div className="border rounded-md p-2 flex flex-wrap gap-2 bg-white focus-within:ring-1 focus-within:ring-blue-500">
+                        {/* Selected tags */}
+                        {selectedTags.map((tag, index) => {
+                          // Use category styling for category tags
+                          const isTagCategory = isCategory(tag);
+                          return (
+                            <div 
+                              key={index}
+                              className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                                isTagCategory 
+                                  ? `${getColorForTag(tag).bg} ${getColorForTag(tag).text}`
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {isTagCategory ? (
+                                <svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  fill="none" 
+                                  viewBox="0 0 24 24" 
+                                  strokeWidth={1.5} 
+                                  stroke="currentColor" 
+                                  className="w-3 h-3 mr-1"
+                                >
+                                  <path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
+                                  />
+                                </svg>
+                              ) : (
+                                <span className="mr-1 font-medium">#</span>
+                              )}
+                              <span>{tag}</span>
+                              <button 
+                                type="button"
+                                className="ml-1 hover:opacity-80"
+                                onClick={() => removeTag(tag)}
+                              >
+                                <MdClose size={12} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Category if selected */}
+                        {selectedCategory && (
+                          <div className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                            getColorForTag(selectedCategory).bg} ${getColorForTag(selectedCategory).text
+                          }`}
+                          >
+                            <svg 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              strokeWidth={1.5} 
+                              stroke="currentColor" 
+                              className="w-3 h-3 mr-1"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
+                              />
+                            </svg>
+                            <span>{selectedCategory}</span>
+                            <button 
+                              type="button"
+                              className="ml-1 hover:opacity-80"
+                              onClick={() => setSelectedCategory(null)}
+                            >
+                              <MdClose size={12} />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Tag input with help text */}
+                        <div className="flex flex-1 items-center min-w-[120px]">
+                          <input
+                            type="text"
+                            value={tagInput}
+                            onChange={handleTagInputChange}
+                            onKeyDown={handleTagKeyDown}
+                            className="outline-none border-0 flex-1 text-sm font-mono tag-input"
+                            placeholder="Type to add tags or @category..."
+                            ref={tagInputRef}
+                            tabIndex={2}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Tag/Category suggestions */}
+                      {suggestedTags.length > 0 && (
+                        <div className="mt-1 border rounded-md bg-white max-h-32 overflow-y-auto p-2">
+                          {/* Group items by categories and tags */}
+                          <div className="mb-2">
+                            {/* Categories group */}
+                            {suggestedTags.some(tag => isCategory(tag)) && (
+                              <div className="mb-2">
+                                <div className="text-xs text-gray-500 font-medium px-2 mb-1">Categories</div>
+                                {suggestedTags.filter(tag => isCategory(tag)).map((tag, index) => {
+                                  const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
+                                  return (
+                                    <div 
+                                      key={`category-${index}`}
+                                      className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
+                                        isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
+                                      }`}
+                                      onClick={() => {
+                                        if (selectedCategory) {
+                                          addTag(tag);
+                                        } else {
+                                          selectCategory(tag);
+                                        }
+                                      }}
+                                      data-suggestion-index={suggestedTags.indexOf(tag)}
+                                    >
+                                      <div className="flex items-center">
+                                        <div 
+                                          className={`rounded-full px-2 py-0.5 text-xs mr-2 flex items-center ${
+                                            getColorForTag(tag).bg} ${getColorForTag(tag).text
+                                          }`}
+                                        >
+                                          <svg 
+                                            xmlns="http://www.w3.org/2000/svg" 
+                                            fill="none" 
+                                            viewBox="0 0 24 24" 
+                                            strokeWidth={1.5} 
+                                            stroke="currentColor" 
+                                            className="w-3 h-3 mr-1"
+                                          >
+                                            <path 
+                                              strokeLinecap="round" 
+                                              strokeLinejoin="round" 
+                                              d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
+                                            />
+                                          </svg>
+                                          {tag}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            
+                            {/* Tags group */}
+                            {suggestedTags.some(tag => !isCategory(tag)) && (
+                              <div>
+                                <div className="text-xs text-gray-500 font-medium px-2 mb-1">Tags</div>
+                                {suggestedTags.filter(tag => !isCategory(tag)).map((tag, index) => {
+                                  const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
+                                  return (
+                                    <div 
+                                      key={`tag-${index}`}
+                                      className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
+                                        isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
+                                      }`}
+                                      onClick={() => addTag(tag)}
+                                      data-suggestion-index={suggestedTags.indexOf(tag)}
+                                    >
+                                      <div className="flex items-center">
+                                        <div 
+                                          className="rounded-full px-2 py-0.5 text-xs mr-2 flex items-center bg-gray-100 text-gray-600"
+                                        >
+                                          <span className="mr-1 font-medium">#</span>
+                                          {tag}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-2 text-xs text-gray-500">
+                        Press Enter to add a tag, or use <span className="font-mono bg-gray-100 px-1 rounded">@category</span> to add a category.
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 flex justify-center flex-col items-center">
+                      <Button 
+                        onClick={addNewPrompt}
+                        className="max-w-xs w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting 
+                          ? "Saving..." 
+                          : isRemixMode 
+                            ? "Save Remix" 
+                            : "Add Prompt"}
+                      </Button>
+                      <div className="text-xs text-gray-400 mt-2">
+                        Press <kbd className="px-1 py-0.5 bg-gray-100 rounded border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded border">Enter</kbd> to submit
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
