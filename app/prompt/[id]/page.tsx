@@ -137,7 +137,7 @@ export default function PromptDetailPage() {
           // Add the line to the current follow-up
           currentFollowUp += '\n' + line;
         }
-      } else {
+    } else {
         // Add regular line to main prompt
         if (mainPromptLines.length > 0 && mainPromptLines[mainPromptLines.length - 1].type === 'text') {
           // Append to existing text block
@@ -357,7 +357,7 @@ export default function PromptDetailPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+            </div>
             ))}
           </div>
           

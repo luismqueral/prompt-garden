@@ -945,8 +945,63 @@ To create follow-up prompts that will display with circle indicators:
   const stripSpecialTags = (content: string): string => {
     if (!content) return '';
     
+    // Split content by lines to analyze structure
+    const lines = content.split('\n');
+    let result = '';
+    
     // Remove title lines starting with #
-    let result = content.replace(/^#\s+.*$/gm, '').trim();
+    const filteredLines = lines.filter(line => !line.trim().match(/^#\s+.*$/));
+    
+    // Check if the first non-empty line is a note
+    let startingContentIndex = 0;
+    for (let i = 0; i < filteredLines.length; i++) {
+      if (filteredLines[i].trim() === '') continue; // Skip empty lines
+      
+      if (filteredLines[i].trim().startsWith('>')) {
+        // First content is a note, keep searching for actual content
+        startingContentIndex = i + 1;
+        while (startingContentIndex < filteredLines.length) {
+          // Skip empty lines and more notes
+          if (filteredLines[startingContentIndex].trim() === '' || 
+              filteredLines[startingContentIndex].trim().startsWith('>')) {
+            startingContentIndex++;
+            continue;
+          }
+          break;
+        }
+      }
+      break;
+    }
+    
+    // If no suitable content was found after notes, use original approach
+    if (startingContentIndex >= filteredLines.length) {
+      startingContentIndex = 0;
+    }
+    
+    // Find where numbered items begin
+    let numberedItemIndex = -1;
+    for (let i = startingContentIndex; i < filteredLines.length; i++) {
+      if (/^\d+\.\s+.*/.test(filteredLines[i])) {
+        numberedItemIndex = i;
+        break;
+      }
+    }
+    
+    // If there's a follow-up prompt and no regular content, use the first follow-up prompt
+    if (numberedItemIndex === startingContentIndex && numberedItemIndex !== -1) {
+      // Extract just the numbered item's content (without the number)
+      const match = filteredLines[numberedItemIndex].match(/^\d+\.\s+(.*)/);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+    
+    // Otherwise use content between startingContentIndex and first numbered item (or end)
+    if (numberedItemIndex !== -1) {
+      result = filteredLines.slice(startingContentIndex, numberedItemIndex).join('\n');
+    } else {
+      result = filteredLines.slice(startingContentIndex).join('\n');
+    }
     
     // Remove context tags without leaving extra whitespace
     result = result.replace(/<context>[\s\S]*?<\/context>/g, '');
@@ -959,37 +1014,6 @@ To create follow-up prompts that will display with circle indicators:
     
     // Remove note content (lines starting with >)
     result = result.replace(/\n>.*?(\n|$)/g, '\n');
-    
-    // Split content by lines and identify numbered lines
-    const lines = result.split('\n');
-    const numberedLines = new Set<number>();
-    
-    lines.forEach((line, index) => {
-      if (/^\d+\.\s+.*/.test(line)) {
-        numberedLines.add(index);
-      }
-    });
-    
-    // Only keep content until the first numbered item
-    let processedLines: string[] = [];
-    let foundNumberedLine = false;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const isNumberedLine = numberedLines.has(i);
-      
-      if (isNumberedLine) {
-        foundNumberedLine = true;
-        break; // Stop processing at first numbered line
-      }
-      
-      if (!foundNumberedLine) {
-        processedLines.push(line);
-      }
-    }
-    
-    // Join the filtered lines back into a string
-    result = processedLines.join('\n');
     
     // Clean up any double line breaks that might have been created
     result = result.replace(/\n\s*\n\s*\n/g, '\n\n');
