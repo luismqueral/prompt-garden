@@ -6,18 +6,18 @@ This document serves as an index to the various architecture and documentation r
 
 | Document | Description |
 |----------|-------------|
-| [Codebase Architecture](./codebase-architecture.md) | Visual representation of the application architecture with component relationships and data flow |
-| [Data Flow Documentation](./data-flow-documentation.md) | Detailed explanation of how data moves through the application |
-| [Syntax Highlighting Documentation](./syntax-highlighting-documentation.md) | In-depth guide to the custom syntax highlighting implementation |
+| [Codebase Architecture](./architecture/codebase-architecture.md) | Visual representation of the application architecture with component relationships and data flow |
+| [Data Flow Documentation](./architecture/data-flow-documentation.md) | Detailed explanation of how data moves through the application |
+| [Syntax Highlighting Documentation](./guides/syntax-highlighting-documentation.md) | In-depth guide to the custom syntax highlighting implementation |
 
 ## Core Modules with Comprehensive Comments
 
 The following core modules have been extensively documented with comments explaining their functionality:
 
-- **[app/page.tsx](./app/page.tsx)** - Main homepage component with prompt display and filtering
-- **[lib/googleSheets/prompts.ts](./lib/googleSheets/prompts.ts)** - Google Sheets integration for prompt CRUD operations
-- **[lib/googleSheets/auth.ts](./lib/googleSheets/auth.ts)** - Authentication with Google Sheets API
-- **[lib/googleSheets/tags.ts](./lib/googleSheets/tags.ts)** - Tags and categories management
+- **app/page.tsx** - Main homepage component with prompt display and filtering
+- **lib/googleSheets/prompts.ts** - Google Sheets integration for prompt CRUD operations
+- **lib/googleSheets/auth.ts** - Authentication with Google Sheets API
+- **lib/googleSheets/tags.ts** - Tags and categories management
 
 ## How to Use This Documentation
 
@@ -25,10 +25,10 @@ The following core modules have been extensively documented with comments explai
 
 If you're new to the codebase:
 
-1. Start with the [Codebase Architecture](./codebase-architecture.md) document to understand the overall structure
-2. Read the [Data Flow Documentation](./data-flow-documentation.md) to understand how data moves through the system
+1. Start with the [Codebase Architecture](./architecture/codebase-architecture.md) document to understand the overall structure
+2. Read the [Data Flow Documentation](./architecture/data-flow-documentation.md) to understand how data moves through the system
 3. Explore the core module files with their comprehensive comments
-4. For specific features, refer to the specialized documentation (e.g., Syntax Highlighting)
+4. For specific features, refer to the specialized documentation (e.g., [Syntax Highlighting](./guides/syntax-highlighting-documentation.md))
 
 ### For Feature Development
 
