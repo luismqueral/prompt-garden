@@ -1,7 +1,35 @@
+/**
+ * Tags Management Module for Google Sheets Integration
+ * 
+ * This module manages tags and categories for prompts in the application.
+ * It handles tag storage, retrieval, and count updates in the Google Sheets backend.
+ * 
+ * Key Functionality:
+ * - Retrieving all tags and their usage counts from Google Sheets
+ * - Retrieving categories (a special type of tag)
+ * - Updating tag counts based on prompt usage
+ * 
+ * Architecture Notes:
+ * - Tags are stored in a separate sheet from prompts
+ * - Categories are implemented as a special type of tag (with isCategory=true)
+ * - Tag counts are managed centrally rather than calculated on-the-fly
+ * - The module handles synchronization of tags with prompt data
+ */
+
 import { getGoogleSheetsClient } from './auth';
 import { GOOGLE_SHEETS_CONFIG } from './config';
 
-// Type definition for tags
+/**
+ * Tag Interface
+ * 
+ * Defines the structure of a tag object in the application.
+ * 
+ * Properties:
+ * - name: The tag text/label that is displayed and used for filtering
+ * - count: Number of prompts that use this tag
+ * - isCategory: Boolean flag indicating if this tag is also a category
+ *   (Categories are a special type of tag used for primary classification)
+ */
 export interface Tag {
   name: string;
   count: number;
@@ -9,7 +37,20 @@ export interface Tag {
 }
 
 /**
- * Get all tags from the Google Sheet
+ * Get All Tags
+ * 
+ * Fetches all tags and their metadata from the Google Sheet.
+ * 
+ * This function:
+ * 1. Connects to the Google Sheets API
+ * 2. Retrieves all rows from the Tags sheet (excluding the header)
+ * 3. Transforms each row into a Tag object with proper typing
+ * 
+ * The sheet structure expected is:
+ * | name | count | isCategory |
+ * 
+ * @returns Promise resolving to an array of Tag objects
+ * @throws Error if the Google Sheets API call fails
  */
 export async function getAllTags(): Promise<Tag[]> {
   try {
@@ -43,7 +84,18 @@ export async function getAllTags(): Promise<Tag[]> {
 }
 
 /**
- * Get categories (special type of tags)
+ * Get Categories
+ * 
+ * Retrieves only the tags that are marked as categories.
+ * Categories are a special subset of tags used for primary classification.
+ * 
+ * This function:
+ * 1. Fetches all tags using getAllTags()
+ * 2. Filters to include only those marked as categories
+ * 3. Returns just the category names as strings
+ * 
+ * @returns Promise resolving to an array of category names
+ * @throws Error if the Google Sheets API call fails
  */
 export async function getCategories(): Promise<string[]> {
   try {
@@ -58,8 +110,22 @@ export async function getCategories(): Promise<string[]> {
 }
 
 /**
- * Update tag counts based on the prompts
- * Call this after adding, updating, or deleting prompts
+ * Update Tag Counts
+ * 
+ * Recalculates and updates tag and category counts based on current prompt data.
+ * This should be called after adding, updating, or deleting prompts to keep tag counts accurate.
+ * 
+ * This function:
+ * 1. Processes all prompts to count tag and category occurrences
+ * 2. Clears the existing tag data in the sheet
+ * 3. Writes the updated tag data with new counts
+ * 
+ * Tag counts are stored in the sheet rather than calculated on-the-fly for performance reasons,
+ * especially as the number of prompts grows.
+ * 
+ * @param prompts - Array of prompt objects with tags and optional category
+ * @returns Promise that resolves when the operation is complete
+ * @throws Error if the Google Sheets API call fails
  */
 export async function updateTagCounts(prompts: Array<{ tags: string[], category?: string }>): Promise<void> {
   try {
@@ -94,6 +160,7 @@ export async function updateTagCounts(prompts: Array<{ tags: string[], category?
     });
     
     // Convert to rows for the sheet
+    // Each row represents a tag with its count and category status
     const tagRows = Object.entries(tagCounts).map(([name, count]) => [
       name,
       count.toString(),
@@ -101,6 +168,7 @@ export async function updateTagCounts(prompts: Array<{ tags: string[], category?
     ]);
     
     // Clear the existing tags data (except header)
+    // This is done to remove any tags that are no longer in use
     await sheets.spreadsheets.values.clear({
       spreadsheetId: sheetId,
       range: `${sheetName}!A2:C`,
@@ -109,6 +177,7 @@ export async function updateTagCounts(prompts: Array<{ tags: string[], category?
     // If we have tags to update
     if (tagRows.length > 0) {
       // Write the new tag data
+      // This rebuilds the entire tags sheet with fresh counts
       await sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
         range: `${sheetName}!A2:C`,

@@ -1,3 +1,26 @@
+/**
+ * Prompt Garden - Homepage Component
+ * 
+ * This is the main landing page of the Prompt Garden application, responsible for displaying, 
+ * filtering, and managing prompts. It implements a client-side rendered component using 
+ * Next.js's "use client" directive.
+ * 
+ * Key Functionality:
+ * - Displays a grid of prompt cards with syntax highlighting
+ * - Provides filtering by tags and categories
+ * - Offers search functionality
+ * - Allows adding new prompts
+ * - Implements syntax highlighting for special prompt formats
+ * - Handles copy-to-clipboard functionality
+ * 
+ * Architecture Notes:
+ * - Uses client-side rendering ("use client" directive) for interactivity
+ * - Fetches data from Google Sheets via the PromptService API
+ * - Uses CodeMirror for rich text editing with custom syntax highlighting
+ * - Implements custom formatting for variables, notes, and follow-ups
+ * - Uses React hooks for state management (useState, useEffect, useRef)
+ */
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -28,7 +51,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 
-// Updated type for prompts
+/**
+ * Prompt Type Definition
+ * 
+ * This defines the structure of a prompt object used throughout the application.
+ * - id: Unique identifier for the prompt
+ * - title: The prompt's title
+ * - content: The actual prompt text content
+ * - tags: Array of tags associated with the prompt
+ * - category: Optional category classification
+ * - createdAt: Timestamp when the prompt was created
+ * - updatedAt: Timestamp when the prompt was last updated
+ */
 type Prompt = {
   id: string;
   title: string;
@@ -39,10 +73,28 @@ type Prompt = {
   updatedAt?: string;
 };
 
-// Initial example prompts
+// Initial example prompts array (empty to start)
 const initialPrompts: Prompt[] = [];
 
-// Helper function to highlight syntax in prompt text
+/**
+ * Highlight Prompt Syntax Function
+ * 
+ * This is a sophisticated function that processes the raw text of a prompt and converts it into
+ * React components with appropriate styling based on syntax patterns. It handles:
+ * 
+ * 1. Variables: Text within [brackets] is styled as variables
+ * 2. Notes: Lines starting with > are styled as context notes
+ * 3. Numbered Items: Lines starting with numbers (1., 2., etc.) are styled as follow-up prompts
+ * 4. Continued Text: Text after numbered items is styled as a continued part of the numbered item
+ * 
+ * The function uses a multi-pass approach:
+ * - First identifies all numbered lines and sequence terminators
+ * - Then processes the text line by line, applying appropriate styling
+ * - Special styling is applied to text within a numbered sequence
+ * 
+ * @param text - The raw prompt text to process
+ * @returns An array of React nodes with appropriate styling
+ */
 const highlightPromptSyntax = (text: string): React.ReactNode[] => {
   if (!text) return [text];
   
@@ -140,7 +192,20 @@ const highlightPromptSyntax = (text: string): React.ReactNode[] => {
   });
 };
 
-// Helper function to highlight variable syntax [VARIABLE] only
+/**
+ * Highlight Variable Syntax Function
+ * 
+ * This helper function specifically handles the highlighting of variables in the text.
+ * Variables are denoted by [square brackets] and are styled differently from regular text.
+ * 
+ * The function:
+ * 1. Splits the text by the variable pattern using regex
+ * 2. Processes each part, highlighting variables and leaving other text as-is
+ * 3. Returns an array of React nodes with appropriate styling
+ * 
+ * @param text - The text to process for variable syntax
+ * @returns An array of React nodes with variables highlighted
+ */
 const highlightVariableSyntax = (text: string): React.ReactNode[] => {
   // Split text by [variable] pattern
   const parts = text.split(/(\[[^\]]+\])/g);
@@ -172,7 +237,23 @@ const customMarkdownExtension = markdown({
   addKeymap: true,
 });
 
-// Custom regex matcher for variable syntax [VARIABLE] and text after sequences
+/**
+ * Variable Syntax Highlighter for CodeMirror
+ * 
+ * This function creates a CodeMirror extension that provides custom syntax highlighting
+ * for variables ([VARIABLE]) and text after numbered sequences within the editor.
+ * 
+ * It works by:
+ * 1. Creating decorations for variable patterns
+ * 2. Processing the document line by line to identify numbered sequences
+ * 3. Applying special styling to text within those sequences
+ * 
+ * This creates a consistent editing experience that matches the display format.
+ * 
+ * @param hasTextAfterSequence - Boolean state indicating if there's text after a sequence
+ * @param setHasTextAfterSequence - Function to update the state
+ * @returns A CodeMirror extension for syntax highlighting
+ */
 const variableSyntaxHighlighter = (
   hasTextAfterSequence: boolean,
   setHasTextAfterSequence: (value: boolean) => void
