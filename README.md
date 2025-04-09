@@ -128,3 +128,51 @@ If you encounter data alignment issues, you can use the fix-data endpoint to rea
 curl http://localhost:3000/api/fix-data
 ```
 This endpoint will reformat all prompts with proper column alignment.
+
+## Test Automation
+
+The project includes a test automation script that helps generate test data for development and testing purposes. The script can generate various types of prompts with different complexity levels and lengths.
+
+### Using the Test Automation Script
+
+```bash
+./test-automation.sh [options]
+```
+
+### Options
+
+- `--count N` - Generate N test prompts (default: 100)
+- `--clean-test-data` - Clean all test data from the spreadsheet
+- `--long-prompts` - Generate long content prompts for testing
+- `--complexity LEVEL` - Set syntax complexity level (low, medium, high, extreme)
+- `--help` - Display help message
+
+### Examples
+
+```bash
+# Generate 500 standard test prompts
+./test-automation.sh --count 500
+
+# Generate prompts with varying lengths at medium complexity
+./test-automation.sh --long-prompts
+
+# Generate prompts with high syntax complexity
+./test-automation.sh --complexity high
+
+# Combined options: Generate both 50 standard prompts and long prompts with extreme complexity
+./test-automation.sh --count 50 --long-prompts --complexity extreme
+
+# Clean all test data from the spreadsheet
+./test-automation.sh --clean-test-data
+```
+
+### Complexity Levels
+
+The script supports four complexity levels for generating prompts:
+
+- **Low**: Basic prompt structure with a few variables
+- **Medium**: More variables, context notes, and follow-ups
+- **High**: Many variables, context notes, follow-ups, and complex formatting
+- **Extreme**: All syntax features extensively used, including complex nesting and formatting
+
+This is particularly useful for testing the application's performance and rendering capabilities with different types of prompt content.
