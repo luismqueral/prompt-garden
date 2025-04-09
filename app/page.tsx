@@ -503,13 +503,30 @@ To create follow-up prompts that will display with circle indicators:
 
   // Focus search input when browse view is active
   useEffect(() => {
-    if (isLoaded && activeView === "browse" && !activeTag && searchInputRef.current) {
+    if (activeView === "browse" && searchInputRef.current) {
       // Small delay to ensure the DOM is fully ready
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, 100);
     }
   }, [isLoaded, activeView, activeTag]);
+
+  // Re-focus search input when filter/tag is cleared or changed
+  useEffect(() => {
+    if (activeView === "browse" && searchInputRef.current) {
+      // Focus search input when filters change
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [activeTag]);
+
+  // Focus search when returning to browse view
+  useEffect(() => {
+    if (activeView === "browse" && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [activeView]);
 
   // Check for URL params on mount to set the correct view
   useEffect(() => {
@@ -1267,6 +1284,7 @@ To create follow-up prompts that will display with circle indicators:
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 ref={searchInputRef}
+                autoFocus
               />
               <MdSearch
                 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" 
