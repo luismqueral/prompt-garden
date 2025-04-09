@@ -229,12 +229,72 @@ export default function PromptDetailPage() {
     );
   };
 
+  // Skeleton loader for the prompt detail page
+  const SkeletonLoader = () => {
+    return (
+      <div className="animate-pulse">
+        {/* Back button and title skeleton */}
+        <div className="flex items-center mb-6">
+          <div className="h-8 w-8 bg-gray-200 rounded-full mr-3"></div>
+          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+        </div>
+        
+        {/* Main prompt card skeleton */}
+        <div className="bg-white p-6 rounded-lg border border-gray-100 mb-8">
+          {/* Title skeleton */}
+          <div className="h-7 bg-gray-200 rounded w-3/4 mb-4"></div>
+          
+          {/* Content skeleton */}
+          <div className="space-y-2 mb-6">
+            <div className="h-4 bg-gray-100 rounded"></div>
+            <div className="h-4 bg-gray-100 rounded"></div>
+            <div className="h-4 bg-gray-100 rounded"></div>
+            <div className="h-4 bg-gray-100 rounded w-5/6"></div>
+          </div>
+          
+          {/* Content box skeleton */}
+          <div className="h-24 bg-gray-100 rounded-md mb-5"></div>
+          
+          {/* Tags and metadata skeleton */}
+          <div className="flex justify-between mt-4">
+            <div className="h-6 bg-gray-100 rounded-full w-20"></div>
+            <div className="flex gap-1">
+              <div className="h-6 bg-gray-100 rounded-full w-14"></div>
+              <div className="h-6 bg-gray-100 rounded-full w-14"></div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Follow-up prompts skeleton */}
+        <div className="space-y-4">
+          <div className="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+          
+          {/* Follow-up item skeletons */}
+          {[1, 2].map((item) => (
+            <div key={item} className="bg-white p-4 rounded-lg border border-gray-100">
+              <div className="flex items-start">
+                <div className="h-6 w-6 bg-gray-200 rounded-full flex-shrink-0 mr-3"></div>
+                <div className="w-full">
+                  <div className="space-y-2 mb-3">
+                    <div className="h-4 bg-gray-100 rounded"></div>
+                    <div className="h-4 bg-gray-100 rounded"></div>
+                    <div className="h-4 bg-gray-100 rounded w-3/4"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100">
         <Header isCreateView={false} />
-        <div className="max-w-2xl mx-auto p-6 flex justify-center items-center" style={{ minHeight: 'calc(100vh - 64px)' }}>
-          <p className="text-gray-600">Loading prompt...</p>
+        <div className="max-w-2xl mx-auto p-6">
+          <SkeletonLoader />
         </div>
       </div>
     );
