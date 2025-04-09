@@ -1229,6 +1229,33 @@ To create follow-up prompts that will display with circle indicators:
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeView]);
 
+  // Skeleton loading component
+  const SkeletonLoader = () => {
+    return (
+      <div className="space-y-8">
+        {Array(3).fill(0).map((_, i) => (
+          <div key={i} className="bg-white p-5 rounded-lg border border-gray-100 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+            <div className="space-y-2 mb-4">
+              <div className="h-3 bg-gray-100 rounded"></div>
+              <div className="h-3 bg-gray-100 rounded"></div>
+              <div className="h-3 bg-gray-100 rounded"></div>
+              <div className="h-3 bg-gray-100 rounded w-5/6"></div>
+            </div>
+            <div className="h-24 bg-gray-100 rounded-md mb-3"></div>
+            <div className="flex justify-between">
+              <div className="h-6 bg-gray-100 rounded-full w-20"></div>
+              <div className="flex gap-1">
+                <div className="h-6 bg-gray-100 rounded-full w-14"></div>
+                <div className="h-6 bg-gray-100 rounded-full w-14"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Main navigation - transparent header bar */}
@@ -1302,328 +1329,144 @@ To create follow-up prompts that will display with circle indicators:
         )}
         
         <div className="space-y-10">
-          {searchQuery || activeTag
-            ? filteredPrompts.map(prompt => renderPrompt(prompt))
-            : activeView === "create" ? (
-              <div className="min-h-screen flex flex-col bg-gray-100">
-                {/* Content area - WIDER WIDTH */}
-                <div className="px-6 py-4 flex-1 mx-auto max-w-3xl w-full">
-                  {/* Title above content area */}
+          {!isLoaded ? (
+            <SkeletonLoader />
+          ) : searchQuery || activeTag ? (
+            filteredPrompts.length > 0 ? (
+              filteredPrompts.map(prompt => renderPrompt(prompt))
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 mb-2">No prompts found</p>
+                <p className="text-sm text-gray-400">
+                  {searchQuery ? `No results for "${searchQuery}"` : `No prompts with the tag "${activeTag}"`}
+                </p>
+              </div>
+            )
+          ) : activeView === "create" ? (
+            <div className="min-h-screen flex flex-col bg-gray-100">
+              {/* Content area - WIDER WIDTH */}
+              <div className="px-6 py-4 flex-1 mx-auto max-w-3xl w-full">
+                {/* Title above content area */}
                 <h1 className="text-2xl font-bold mb-6 text-center">Add New Prompt</h1>
                 
-                  {/* White content area without border */}
-                  <div className="bg-white rounded-lg p-6">
-                    <div>
-                      <div className="border rounded-md overflow-hidden mb-1 focus-within:ring-1 focus-within:ring-blue-500">
-                        <CodeMirror
-                  value={newPromptContent}
-                          height="400px"
-                          extensions={[customMarkdownExtension, createPromptSyntaxHighlighter()]}
-                          onChange={handleEditorChange}
-                          placeholder={placeholderText}
-                          theme="light"
-                          style={{ 
-                            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                            fontSize: '0.875rem'
-                          }}
-                          tabIndex={1}
-                        />
-                      </div>
-                      
-                      {/* Dynamic warning that appears only when text after sequences is detected */}
-                      {(() => {
-                        // Check if there's text after numbered items
-                        const lines = newPromptContent.split('\n');
-                        for (let i = 1; i < lines.length; i++) {
-                          const prevLine = lines[i-1];
-                          const currentLine = lines[i];
-                          
-                          if (
-                            /^\d+\.\s+.*/.test(prevLine) && // Previous line is numbered
-                            currentLine.trim() !== '' && // Current line is not blank
-                            !/^\d+\.\s+.*/.test(currentLine) && // Current line is not numbered
-                            !currentLine.trim().startsWith('>') // Current line is not a note
-                          ) {
-                            // Found text right after a numbered item!
-                            return (
-                              <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-700 text-sm flex gap-2 items-start">
-                                <span className="text-yellow-500 font-bold">⚠️</span>
-                                <div>
-                                  <strong>Warning:</strong> Text after numbered items appears with strikethrough and in light gray because it won't be visible in cards or when copying. Add a blank line after numbered items to continue with regular text.
-                                </div>
-                              </div>
-                            );
-                          }
-                        }
-                        return null; // No warning needed
-                      })()}
-                      
-                      {/* Syntax guide toggle */}
-                      <div className="mb-3">
-                        <button 
-                          onClick={() => setShowSyntaxGuide(!showSyntaxGuide)} 
-                          className="text-sm text-gray-400 hover:text-gray-800 flex items-center gap-1 mt-4"
-                        >
-                          <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            width="16" 
-                            height="16" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="2" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            className={`transition-transform ${showSyntaxGuide ? 'rotate-90' : ''}`}
-                          >
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                          </svg>
-                          <span className="font-medium">Syntax Guide</span>
-                        </button>
-                      </div>
-                      
-                      {/* Syntax guide */}
-                      {showSyntaxGuide && (
-                        <div className="mb-12 bg-gray-50 p-4 rounded-md">
-                          <div className="space-y-3 text-sm text-gray-600">
-                            <div className="flex items-start">
-                              <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                                <span className="text-emerald-700 font-medium uppercase">[VARIABLE]</span>
-                              </div>
-                              <div className="flex-1">
-                                Variables in brackets show in uppercase green text
-                              </div>
-                            </div>
-                            <div className="flex items-start">
-                              <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                                &gt; Note
-                              </div>
-                              <div className="flex-1">
-                                Context notes appear as blockquotes (not visible on homepage cards)
-                              </div>
-                            </div>
-                            <div className="flex items-start">
-                              <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                                1. Follow-up
-                              </div>
-                              <div className="flex-1">
-                                Numbered items become follow-up prompts with circle indicators (not visible on homepage cards)
-                              </div>
-                            </div>
-                            <div className="flex items-start">
-                              <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                                <span className="text-gray-400 line-through opacity-60">Hidden text</span>
-                              </div>
-                              <div className="flex-1 text-gray-600">
-                                Text after numbered items will be hidden. Add a blank line after a sequence to continue with regular text.
-                              </div>
-                            </div>
+                {/* White content area without border */}
+                <div className="bg-white rounded-lg p-6">
+                  <div>
+                    <div className="border rounded-md overflow-hidden mb-1 focus-within:ring-1 focus-within:ring-blue-500">
+                      <CodeMirror
+                        value={newPromptContent}
+                        height="400px"
+                        extensions={[customMarkdownExtension, createPromptSyntaxHighlighter()]}
+                        onChange={handleEditorChange}
+                        placeholder={placeholderText}
+                        theme="light"
+                        style={{ 
+                          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                          fontSize: '0.875rem'
+                        }}
+                        tabIndex={1}
+                      />
                     </div>
-                  </div>
-                )}
-                
-                      <div className="mt-9 mb-6">
-                        <p className="text-sm font-medium mb-2">Tags & Categories</p>
-                  <div className="border rounded-md p-2 flex flex-wrap gap-2 bg-white focus-within:ring-1 focus-within:ring-blue-500">
-                    {/* Selected tags */}
-                    {selectedTags.map((tag, index) => {
-                            // Use category styling for category tags
-                            const isTagCategory = isCategory(tag);
-                      return (
-                        <div 
-                          key={index}
-                                className={`px-2 py-1 rounded-full text-xs flex items-center ${
-                                  isTagCategory 
-                                    ? `${getColorForTag(tag).bg} ${getColorForTag(tag).text}`
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                {isTagCategory ? (
-                                  <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    fill="none" 
-                                    viewBox="0 0 24 24" 
-                                    strokeWidth={1.5} 
-                                    stroke="currentColor" 
-                                    className="w-3 h-3 mr-1"
-                                  >
-                                    <path 
-                                      strokeLinecap="round" 
-                                      strokeLinejoin="round" 
-                                      d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
-                                    />
-                                  </svg>
-                                ) : (
-                                  <span className="mr-1 font-medium">#</span>
-                                )}
-                          <span>{tag}</span>
-                          <button 
-                            type="button"
-                                  className="ml-1 hover:opacity-80"
-                            onClick={() => removeTag(tag)}
-                          >
-                                  <MdClose size={12} />
-                          </button>
-                        </div>
-                      );
-                    })}
                     
-                          {/* Category if selected */}
-                          {selectedCategory && (
-                            <div className={`px-2 py-1 rounded-full text-xs flex items-center ${
-                              getColorForTag(selectedCategory).bg} ${getColorForTag(selectedCategory).text
-                            }`}
-                            >
-                              <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                fill="none" 
-                                viewBox="0 0 24 24" 
-                                strokeWidth={1.5} 
-                                stroke="currentColor" 
-                                className="w-3 h-3 mr-1"
-                              >
-                                <path 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
-                                />
-                              </svg>
-                              <span>{selectedCategory}</span>
-                              <button 
-                                type="button"
-                                className="ml-1 hover:opacity-80"
-                                onClick={() => setSelectedCategory(null)}
-                              >
-                                <MdClose size={12} />
-                              </button>
+                    {/* Dynamic warning that appears only when text after sequences is detected */}
+                    {(() => {
+                      // Check if there's text after numbered items
+                      const lines = newPromptContent.split('\n');
+                      for (let i = 1; i < lines.length; i++) {
+                        const prevLine = lines[i-1];
+                        const currentLine = lines[i];
+                        
+                        if (
+                          /^\d+\.\s+.*/.test(prevLine) && // Previous line is numbered
+                          currentLine.trim() !== '' && // Current line is not blank
+                          !/^\d+\.\s+.*/.test(currentLine) && // Current line is not numbered
+                          !currentLine.trim().startsWith('>') // Current line is not a note
+                        ) {
+                          // Found text right after a numbered item!
+                          return (
+                            <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-700 text-sm flex gap-2 items-start">
+                              <span className="text-yellow-500 font-bold">⚠️</span>
+                              <div>
+                                <strong>Warning:</strong> Text after numbered items appears with strikethrough and in light gray because it won't be visible in cards or when copying. Add a blank line after numbered items to continue with regular text.
+                              </div>
                             </div>
-                          )}
-                          
-                          {/* Tag input with help text */}
-                          <div className="flex flex-1 items-center min-w-[120px]">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={handleTagInputChange}
-                      onKeyDown={handleTagKeyDown}
-                              className="outline-none border-0 flex-1 text-sm font-mono tag-input"
-                              placeholder="Type to add tags or categories..."
-                              ref={tagInputRef}
-                              tabIndex={2}
-                            />
-                          </div>
-                  </div>
-                  
-                        {/* Tag/Category suggestions */}
-                  {suggestedTags.length > 0 && (
-                          <div className="mt-1 border rounded-md bg-white max-h-32 overflow-y-auto p-2">
-                            {/* Group items by categories and tags */}
-                            <div className="mb-2">
-                              {/* Categories group */}
-                              {suggestedTags.some(tag => isCategory(tag)) && (
-                                <div className="mb-2">
-                                  <div className="text-xs text-gray-500 font-medium px-2 mb-1">Categories</div>
-                                  {suggestedTags.filter(tag => isCategory(tag)).map((tag, index) => {
-                                    const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
-                        return (
-                          <div 
-                                        key={`category-${index}`}
-                                        className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
-                                          isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
-                                        }`}
-                                        onClick={() => {
-                                          if (selectedCategory) {
-                                            addTag(tag);
-                                          } else {
-                                            selectCategory(tag);
-                                          }
-                                        }}
-                                        data-suggestion-index={suggestedTags.indexOf(tag)}
-                                      >
-                                        <div className="flex items-center">
-                                          <div 
-                                            className={`rounded-full px-2 py-0.5 text-xs mr-2 flex items-center ${
-                                              getColorForTag(tag).bg} ${getColorForTag(tag).text
-                                            }`}
-                                          >
-                                            <svg 
-                                              xmlns="http://www.w3.org/2000/svg" 
-                                              fill="none" 
-                                              viewBox="0 0 24 24" 
-                                              strokeWidth={1.5} 
-                                              stroke="currentColor" 
-                                              className="w-3 h-3 mr-1"
-                                            >
-                                              <path 
-                                                strokeLinecap="round" 
-                                                strokeLinejoin="round" 
-                                                d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
-                                              />
-                                            </svg>
-                                            {tag}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              
-                              {/* Tags group */}
-                              {suggestedTags.some(tag => !isCategory(tag)) && (
-                                <div>
-                                  <div className="text-xs text-gray-500 font-medium px-2 mb-1">Tags</div>
-                                  {suggestedTags.filter(tag => !isCategory(tag)).map((tag, index) => {
-                                    const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
-                                    return (
-                                      <div 
-                                        key={`tag-${index}`}
-                                        className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
-                                          isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
-                                        }`}
-                            onClick={() => addTag(tag)}
-                                        data-suggestion-index={suggestedTags.indexOf(tag)}
-                          >
-                                        <div className="flex items-center">
-                                          <div 
-                                            className="rounded-full px-2 py-0.5 text-xs mr-2 flex items-center bg-gray-100 text-gray-600"
-                                          >
-                                            <span className="mr-1 font-medium">#</span>
-                            {tag}
-                                          </div>
-                                        </div>
-                          </div>
-                        );
-                      })}
-                                </div>
-                              )}
-                            </div>
-                    </div>
-                  )}
-                </div>
-                
-                      <div className="mt-6 flex justify-center flex-col items-center">
-                        <Button 
-                          onClick={addNewPrompt}
-                          className="max-w-xs w-full bg-blue-600 hover:bg-blue-700 text-white"
-                          disabled={isSubmitting}
+                          );
+                        }
+                      }
+                      return null; // No warning needed
+                    })()}
+                    
+                    {/* Syntax guide toggle */}
+                    <div className="mb-3">
+                      <button 
+                        onClick={() => setShowSyntaxGuide(!showSyntaxGuide)} 
+                        className="text-sm text-gray-400 hover:text-gray-800 flex items-center gap-1 mt-4"
+                      >
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          className={`transition-transform ${showSyntaxGuide ? 'rotate-90' : ''}`}
                         >
-                    {isSubmitting 
-                      ? "Saving..." 
-                      : isRemixMode 
-                        ? "Save Remix" 
-                        : "Add Prompt"}
-                  </Button>
-                        <div className="text-xs text-gray-400 mt-2">
-                          Press <kbd className="px-1 py-0.5 bg-gray-100 rounded border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded border">Enter</kbd> to submit
-                </div>
-              </div>
+                          <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                        <span className="font-medium">Syntax Guide</span>
+                      </button>
                     </div>
+                    
+                    {/* Syntax guide */}
+                    {showSyntaxGuide && (
+                      <div className="mb-12 bg-gray-50 p-4 rounded-md">
+                        <div className="space-y-3 text-sm text-gray-600">
+                          <div className="flex items-start">
+                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
+                              <span className="text-emerald-700 font-medium uppercase">[VARIABLE]</span>
+                            </div>
+                            <div className="flex-1">
+                              Variables in brackets show in uppercase green text
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
+                              &gt; Note
+                            </div>
+                            <div className="flex-1">
+                              Context notes appear as blockquotes (not visible on homepage cards)
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
+                              1. Follow-up
+                            </div>
+                            <div className="flex-1">
+                              Numbered items become follow-up prompts with circle indicators (not visible on homepage cards)
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
+                              <span className="text-gray-400 line-through opacity-60">Hidden text</span>
+                            </div>
+                            <div className="flex-1 text-gray-600">
+                              Text after numbered items will be hidden. Add a blank line after a sequence to continue with regular text.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            ) : prompts.map(prompt => renderPrompt(prompt))
-          }
+            </div>
+          ) : (
+            // Normal prompts view
+            prompts.map(prompt => renderPrompt(prompt))
+          )}
         </div>
       </div>
       {showSuccess && (
