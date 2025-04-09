@@ -1,16 +1,16 @@
-# Prompt Garden - Codebase Architecture
+# 🏗️ Prompt Garden - Codebase Architecture
 
-This document provides a visualization of the Prompt Garden application architecture, showing how different components interact and how data flows through the system.
+This guide explains how the different parts of Prompt Garden fit together, showing you the overall structure and how information flows through the system.
 
 ## Architecture Overview
 
-Prompt Garden is built with Next.js using the App Router pattern. It follows a client-server architecture where:
+Prompt Garden is built with Next.js using the App Router pattern. It follows a client-server approach where:
 
-1. **Client-side components** handle the user interface and interactions
-2. **API routes** provide server-side endpoints for data operations
-3. **Google Sheets** serves as the database for storing prompts, tags, and categories
+1. **Client-side components** create what you see and interact with
+2. **API routes** provide ways for the frontend to talk to the server
+3. **Google Sheets** serves as the database where all the information is stored
 
-The application uses modern React features like hooks and context, along with client-side rendering for interactive components. Data is fetched from and stored in Google Sheets through API routes that abstract the database operations.
+The application uses modern React features like hooks and context, along with client-side rendering for interactive elements. Data is stored in and retrieved from Google Sheets through API routes that simplify database operations.
 
 ## Architecture Diagram
 
@@ -114,43 +114,43 @@ flowchart TB
     class GoogleSheetsAPI external;
 ```
 
-## Key Components and Modules
+## 📦 Key Components and What They Do
 
 ### Client-Side Components
 
-- **Home Page (app/page.tsx)**: The main landing page displaying all prompts with filtering
+- **Home Page (app/page.tsx)**: The main landing page showing all prompts with filtering options
 - **Prompt Detail (app/prompt/[id]/page.tsx)**: Detailed view of a single prompt
 - **New Prompt (app/prompt/new/page.tsx)**: Form for creating a new prompt
 - **CodeMirror Editor**: Rich text editor with custom syntax highlighting for prompts
 
 ### API Routes
 
-- **Prompts API**: Handles fetching all prompts and creating new prompts
-- **Prompt By ID API**: Handles operations on individual prompts (get, update, delete)
+- **Prompts API**: Handles getting all prompts and creating new ones
+- **Prompt By ID API**: Manages operations on individual prompts (get, update, delete)
 - **Tags API**: Provides tag information for filtering
-- **Categories API**: Provides category information for primary classifications
-- **Setup API**: Initializes the Google Sheets database
-- **Fix Data API**: Utility for fixing data alignment issues
+- **Categories API**: Supplies category information for primary classifications
+- **Setup API**: Sets up the Google Sheets database initially
+- **Fix Data API**: Helps fix data alignment issues when needed
 
 ### Google Sheets Integration
 
-- **Authentication**: Handles service account auth with Google API
-- **Prompts Module**: CRUD operations for prompts in Google Sheets
-- **Tags Module**: Manages tags and their counts
-- **Setup Module**: Database initialization and schema setup
+- **Authentication**: Connects securely to the Google API
+- **Prompts Module**: Handles creating, reading, updating, and deleting prompts
+- **Tags Module**: Manages tags and keeps track of their counts
+- **Setup Module**: Helps with initial database setup and structure
 
-## Data Flow
+## 🔄 How Information Flows
 
-1. **User Interactions**: Users interact with client-side components
-2. **Service Layer**: The PromptService mediates between UI and API
-3. **API Routes**: Server-side endpoints handle requests
-4. **Google Sheets Integration**: Data is fetched from or written to Google Sheets
-5. **Google Sheets API**: External service storing the application data
+1. **User Actions**: When you interact with the app (clicking buttons, filling forms)
+2. **Service Layer**: The PromptService coordinates between what you see and the API
+3. **API Routes**: Server-side code processes your requests
+4. **Google Sheets Integration**: Data is saved to or retrieved from Google Sheets
+5. **Google Sheets API**: The external service where all data is actually stored
 
-This architecture provides a clean separation of concerns:
-- UI components handle presentation and user interaction
-- API routes handle server-side logic and data validation
-- Google Sheets modules handle data storage and retrieval
-- Service layer abstracts the communication between client and server
+This architecture keeps things organized by separating:
+- UI components that handle what you see and interact with
+- API routes that process data and validate information
+- Google Sheets modules that store and retrieve information
+- A service layer that connects the user interface to the server
 
-The use of Google Sheets as a database makes the application accessible to non-technical users who can directly view and modify the data using the familiar Google Sheets interface if needed. 
+One nice benefit of using Google Sheets as a database is that non-technical users can directly view and edit the data using the familiar Google Sheets interface if they need to. 

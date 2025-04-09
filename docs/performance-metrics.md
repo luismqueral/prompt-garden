@@ -1,4 +1,6 @@
-# Prompt Garden Performance Testing Metrics
+# 📊 Prompt Garden Performance Testing
+
+This document provides a framework for measuring Prompt Garden's performance. Use these tables to record metrics as you test the application under various conditions.
 
 ## Load Time Metrics
 
@@ -144,37 +146,39 @@ For the extreme complexity test case, record detailed metrics:
 - 
 - 
 
-## How to Collect Metrics
+## 📋 How to Collect Metrics
+
+Here's a straightforward guide to gathering performance data:
 
 1. **Load Time Metrics**:
-   - Use Chrome DevTools > Network tab
-   - Check "Disable cache" and set throttling to desired network condition
-   - Refresh the page and record:
-     - Time to First Byte: First response time in Network tab
-     - First Paint: From Performance tab recording
-     - Time to Interactive: From Performance tab recording
+   - Open Chrome DevTools and go to the Network tab
+   - Check "Disable cache" and set throttling to your desired network speed
+   - Refresh the page and record these key metrics:
+     - Time to First Byte: The first response time shown in the Network tab
+     - First Paint: Found in the Performance tab recording
+     - Time to Interactive: Found in the Performance tab recording
 
 2. **Memory Usage**:
-   - Use Chrome DevTools > Memory tab
-   - Take heap snapshot before and during/after operation
-   - Record JavaScript memory usage
+   - Go to Chrome DevTools > Memory tab
+   - Take a heap snapshot before and during/after your test
+   - Note the JavaScript memory usage difference
 
 3. **Filter/Search Performance**:
-   - Use Performance tab to record during filter/search operation
-   - Measure time from click to render completion
+   - Use the Performance tab to record while performing a filter or search
+   - Measure the time from when you click to when the results finish rendering
    
 4. **API Performance**:
-   - Monitor Network tab for specific API calls
-   - Record request time and response size
+   - Watch the Network tab for specific API calls
+   - Note both the request time and size of the response
    
 5. **Scroll Performance**:
-   - Use Performance tab > Start recording
-   - Scroll through content at a steady rate
-   - Stop recording and look at the FPS chart
-   - Record the minimum FPS during scrolling
+   - Start recording in the Performance tab
+   - Scroll through content at a consistent speed
+   - Stop recording and check the FPS (frames per second) chart
+   - Record the lowest FPS you see while scrolling
    
 6. **Syntax Rendering Performance**:
-   - Use Performance tab > Start recording
-   - Navigate to prompt detail page
-   - Look for specific syntax rendering in the flamegraph
-   - Record time spent in syntax-specific rendering functions 
+   - Start recording in the Performance tab
+   - Navigate to a prompt detail page
+   - Look for syntax-specific rendering in the flamegraph
+   - Note how long the syntax rendering functions take to complete 

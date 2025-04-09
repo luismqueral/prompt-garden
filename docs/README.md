@@ -1,10 +1,10 @@
-# 🗒️ Prompt Garden Documentation
+# 📚 Prompt Garden Documentation
 
-Hey there! 👋 Welcome to the Prompt Garden docs. This is your friendly guide to understanding how everything works around here. Don't worry if you're not a coding expert - we've tried to make this as approachable as possible!
+Welcome to the Prompt Garden documentation. This guide will help you understand how the application works in an approachable way. Whether you're familiar with coding or not, you should find what you need here.
 
-## 📐 High-Level Architecture
+## 🏗️ Architecture Overview
 
-Here's a simple view of how Prompt Garden is built:
+Here's a simplified view of how Prompt Garden is built:
 
 ```
 ┌─────────────────────────────────┐
@@ -31,52 +31,42 @@ Here's a simple view of how Prompt Garden is built:
 └─────────────────────────────────┘
 ```
 
-It's pretty straightforward:
-- The **Frontend** is what you interact with - all the buttons, forms, and displays
-- The **Service Layer** does the behind-the-scenes work like processing data
-- **Google Sheets** is where we store all the prompts and other information
+The application has three main parts:
+- The **Frontend** is the user interface with components for interaction
+- The **Service Layer** manages logic and processes data
+- **Google Sheets** serves as the database where prompts and metadata are stored
 
-## 📂 Where to Find Things
+## 📂 Documentation Structure
 
-Here's what's in this docs folder:
+This docs folder contains:
 
-- **architecture/** - How all the pieces fit together
-  - `codebase-architecture.md` - Shows how different parts connect
-  - `data-flow-documentation.md` - Explains how information moves around
+- **architecture/** - System structure and organization
+  - `codebase-architecture.md` - Component relationships and connections
+  - `data-flow-documentation.md` - How data moves through the system
 
-- **guides/** - How-tos for specific features
-  - `syntax-highlighting-documentation.md` - How we make text look pretty with colors
+- **guides/** - Feature-specific documentation
+  - `syntax-highlighting-documentation.md` - Implementation of syntax highlighting
 
 - **design/** - Design decisions and processes
-  - `design-process.md` - Our approach to building features
+  - `design-process.md` - Design approach and methodology
 
-- **testing/** - How we make sure everything works
-  - `prompt-garden-testing-strategy.md` - Our testing approach
-  - `README-testing.md` - Quick guide to testing
-  - `testing-execution-guide.md` - Step-by-step testing instructions
+- **testing/** - Testing documentation
+  - `prompt-garden-testing-strategy.md` - Testing approach and philosophy
+  - `README-testing.md` - Testing overview
+  - `testing-execution-guide.md` - Testing procedures
 
-## 🏁 Starting Point
+## 🧭 Getting Started
 
-New to the project? Start with [architecture-overview.md](./architecture-overview.md) - it's like a map of everything in these docs and will point you in the right direction!
+If you're new to the project, start with [architecture-overview.md](./architecture-overview.md) which provides a comprehensive map of the documentation and will direct you to relevant resources.
 
-## ✏️ Adding to These Docs
+## 📋 Future Documentation
 
-When you're working on the code:
+Planned documentation additions include:
 
-1. Update docs when you change how things work
-2. Add new docs if you create something major
-3. Try to match the style of what's already here
-4. Keep diagrams up to date
-5. Put new files in folders that make sense
+1. Testing methodologies and coverage
+2. Deployment processes
+3. Performance optimization techniques
+4. Security and permissions model
+5. Additional feature-specific guides
 
-## 🔮 Coming Soon
-
-We're planning to add more docs about:
-
-1. How we test things
-2. How to deploy the app
-3. Making things run faster
-4. Security and permissions
-5. Guides for specific features
-
-Remember, no one expects you to know everything! These docs are here to help, and so is the team. If something's confusing, just ask! 😊 
+If you have questions about any part of the system, the documentation should provide guidance, but don't hesitate to reach out for clarification. 
