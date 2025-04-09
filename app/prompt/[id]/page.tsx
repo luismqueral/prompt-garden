@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { MdShuffle, MdArrowBack, MdContentCopy } from "react-icons/md";
-import { Header } from "@/components/header";
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { PromptService } from '@/lib/api/promptService';
+import { Header } from '@/components/header';
+import { MdContentCopy, MdCheck, MdOutlineArrowBack, MdShuffle } from "react-icons/md";
 
+// Type definition for Prompt
 interface Prompt {
   id: string;
-  title: string;
+  title?: string;
   content: string;
+  tags: string[];
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Interface for parsed prompt sections
@@ -20,38 +24,79 @@ interface ParsedPromptSection {
   index?: number;
 }
 
-export default function PromptDetailPage({ params }: { params: { id: string } }) {
+export default function PromptDetailPage() {
+  const params = useParams();
   const router = useRouter();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [parsedContent, setParsedContent] = useState<ParsedPromptSection[]>([]);
-
+  
+  // Get the prompt ID from URL params
+  const promptId = params.id as string;
+  
+  // Fetch prompt on component mount
   useEffect(() => {
-    // Load the prompt from localStorage
-    const savedPrompts = localStorage.getItem("promptGardenPrompts");
-    if (savedPrompts) {
+    async function fetchPrompt() {
       try {
-        const allPrompts = JSON.parse(savedPrompts) as Prompt[];
-        const foundPrompt = allPrompts.find(p => p.id === params.id);
-        if (foundPrompt) {
-          setPrompt(foundPrompt);
-          
-          // Parse the prompt content for special sections
-          setParsedContent(parsePromptContent(foundPrompt.content));
-          
-          // Generate mock tags for the prompt
-          setTags(getTagsForPrompt(foundPrompt));
-        } else {
-          router.push("/");
+        setIsLoading(true);
+        
+        if (promptId === 'new') {
+          // Handle new prompt creation
+          router.push('/prompt/new');
+          return;
         }
-      } catch (e) {
-        console.error("Error parsing prompts from localStorage:", e);
-        router.push("/");
+        
+        const fetchedPrompt = await PromptService.getPromptById(promptId);
+        setPrompt(fetchedPrompt);
+        
+        // Parse the prompt content for special sections
+        setParsedContent(parsePromptContent(fetchedPrompt.content));
+      } catch (error) {
+        console.error('Error fetching prompt:', error);
+        setError('Failed to load prompt. It may have been deleted or does not exist.');
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      router.push("/");
     }
-  }, [params.id, router]);
+
+    fetchPrompt();
+  }, [promptId, router]);
+  
+  // Handle copy to clipboard
+  const handleCopy = () => {
+    if (!prompt) return;
+    
+    navigator.clipboard.writeText(prompt.content)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+  };
+
+  // Handling the remix function
+  const handleRemix = () => {
+    if (!prompt) return;
+    
+    try {
+      // Store the original content in sessionStorage temporarily
+      sessionStorage.setItem("remixPromptContent", prompt.content);
+      sessionStorage.setItem("remixPromptTitle", `${prompt.title || 'Untitled Prompt'} (Remix)`);
+      // Also store the tags from the original prompt
+      sessionStorage.setItem("remixPromptTags", JSON.stringify(prompt.tags));
+      // Set a flag to focus and select the content textarea instead of the title
+      sessionStorage.setItem("focusAndSelectContent", "true");
+      
+      // Navigate to create page
+      router.push("/prompt/new");
+    } catch (e) {
+      console.error("Error preparing remix:", e);
+    }
+  };
 
   // Parse prompt content to identify special sections
   const parsePromptContent = (content: string): ParsedPromptSection[] => {
@@ -170,7 +215,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
   };
 
   // Helper function to process and style variable syntax for text in [brackets]
-  const processVariableSyntax = (text: string, hasTextAfterSequence?: boolean, setHasTextAfterSequence?: (value: boolean) => void): React.ReactNode[] => {
+  const processVariableSyntax = (text: string): React.ReactNode[] => {
     // Split text by [variable] pattern
     const parts = text.split(/(\[[^\]]+\])/g);
     
@@ -185,7 +230,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
         // It's a variable in brackets - convert to uppercase and style
         const variableText = part.slice(1, -1).toUpperCase();
         return (
-          <span key={index} className="text-emerald-700 font-medium">
+          <span key={index} className="text-emerald-700 font-medium uppercase">
             {variableText}
           </span>
         );
@@ -261,9 +306,9 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
         if (inNumberedSequence) {
           // This is content after a numbered sequence - display with strikethrough
           result.push(
-            <div key={`${index}-line-${i}`} className="pl-6">
+            <div key={`${index}-line-${i}`} className="pl-8 bg-yellow-50 border-l-4 border-yellow-200">
               <div className="flex items-start">
-                <div className="text-gray-400 line-through opacity-60">
+                <div className="text-yellow-700 line-through opacity-60">
                   {processVariableSyntax(line)}
                 </div>
               </div>
@@ -283,7 +328,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
     }
 
     // Process regular content with context notes
-    const contextNoteRegex = /\[context:(.*?)\]/g;
+    const contextNoteRegex = /\{\{CONTEXT_START\}\}(.*?)\{\{CONTEXT_END\}\}/g;
     let match;
     const result: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -293,7 +338,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       const fullMatch = match[0];
       const contextContent = match[1];
       const matchStart = match.index;
-      const matchIndex = lastIndex; // Create a matchIndex for key
+      const matchIndex = result.length; // Create a unique key for each match
 
       // Add content before this context note
       if (matchStart > lastIndex) {
@@ -451,142 +496,6 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       });
   };
 
-  // Handling the remix function
-  const handleRemix = () => {
-    if (!prompt) return;
-    
-    try {
-      // Store the original content in sessionStorage temporarily
-      sessionStorage.setItem("remixPromptContent", prompt.content);
-      sessionStorage.setItem("remixPromptTitle", `${prompt.title} (Remix)`);
-      // Also store the tags from the original prompt
-      sessionStorage.setItem("remixPromptTags", JSON.stringify(tags));
-      // Set a flag to focus and select the content textarea instead of the title
-      sessionStorage.setItem("focusAndSelectContent", "true");
-      
-      // Navigate to create page
-      router.push("/?view=create");
-    } catch (e) {
-      console.error("Error preparing remix:", e);
-    }
-  };
-
-  // Helper function to get tags for a prompt (mock implementation)
-  function getTagsForPrompt(prompt: Prompt): string[] {
-    if (prompt.title.toLowerCase().includes("content")) {
-      return ["writing", "blog", "SEO"];
-    } else if (prompt.title.toLowerCase().includes("code")) {
-      return ["development", "programming", "technical"];
-    } else if (prompt.title.toLowerCase().includes("image")) {
-      return ["visual", "creative", "art"];
-    } else {
-      return ["prompt", "AI", "custom"];
-    }
-  }
-
-  // Get category for a prompt (mock implementation)
-  function getCategoryForPrompt(prompt: Prompt | null): string | null {
-    if (!prompt) return null;
-    
-    if (prompt.title.toLowerCase().includes("content")) {
-      return "writing";
-    } else if (prompt.title.toLowerCase().includes("code")) {
-      return "development";
-    } else if (prompt.title.toLowerCase().includes("image")) {
-      return "visual";
-    } else {
-      // 50% chance of having a category for other prompts
-      return Math.random() > 0.5 ? "AI" : null;
-    }
-  }
-
-  // Get color for a specific tag (consistent pastel colors)
-  function getColorForTag(tag: string): { bg: string; text: string } {
-    // Normalize tag to lowercase for consistent mapping
-    const normalizedTag = tag.toLowerCase();
-    
-    // Map of tags to color combinations (pastel backgrounds with appropriate text colors)
-    const colorMap: Record<string, { bg: string; text: string }> = {
-      "writing": { bg: "bg-pink-100", text: "text-pink-800" },
-      "blog": { bg: "bg-rose-100", text: "text-rose-800" },
-      "seo": { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
-      
-      "development": { bg: "bg-blue-100", text: "text-blue-800" },
-      "programming": { bg: "bg-indigo-100", text: "text-indigo-800" },
-      "technical": { bg: "bg-sky-100", text: "text-sky-800" },
-      
-      "visual": { bg: "bg-green-100", text: "text-green-800" },
-      "creative": { bg: "bg-emerald-100", text: "text-emerald-800" },
-      "art": { bg: "bg-teal-100", text: "text-teal-800" },
-      
-      "food": { bg: "bg-orange-100", text: "text-orange-800" },
-      "cooking": { bg: "bg-amber-100", text: "text-amber-800" },
-      "recipe": { bg: "bg-yellow-100", text: "text-yellow-800" },
-      
-      "ai": { bg: "bg-purple-100", text: "text-purple-800" },
-      "assistant": { bg: "bg-violet-100", text: "text-violet-800" },
-      "general": { bg: "bg-slate-100", text: "text-slate-800" },
-      
-      "prompt": { bg: "bg-gray-100", text: "text-gray-800" },
-      "custom": { bg: "bg-stone-100", text: "text-stone-800" }
-    };
-    
-    // Return the color combination for the tag or a default
-    return colorMap[normalizedTag] || { bg: "bg-gray-100", text: "text-gray-800" };
-  }
-
-  // Rendering the tags with simple styling
-  const renderTags = () => {
-    const category = getCategoryForPrompt(prompt);
-
-    return (
-      <div className="flex justify-between w-full">
-        {/* Category pill on the left */}
-        <div className="flex flex-wrap gap-1">
-          {category && (
-            <span 
-              className={`text-xs px-2 py-1 rounded-full cursor-pointer transition-colors flex items-center gap-1 ${
-                getColorForTag(category).bg} ${getColorForTag(category).text} hover:opacity-80`}
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none"
-                viewBox="0 0 24 24" 
-                strokeWidth={1.5} 
-                stroke="currentColor" 
-                className="w-3 h-3"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
-                />
-              </svg>
-              {category}
-            </span>
-          )}
-        </div>
-        
-        {/* Tags on the right */}
-        <div className="flex flex-wrap gap-1 justify-end">
-          {tags.map((tag, index) => {
-            // Skip the tag if it's the same as the category to avoid duplication
-            if (tag === category) return null;
-            
-            return (
-              <span 
-                key={index}
-                className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs"
-              >
-                {tag}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   // Render a prompt section based on its type
   const renderPromptSection = (section: ParsedPromptSection, index: number) => {
     switch (section.type) {
@@ -622,27 +531,52 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
     }
   };
 
-  if (!prompt) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen p-6 flex flex-col items-center justify-center">
-        <div className="animate-pulse">Loading prompt...</div>
+      <div className="min-h-screen bg-gray-100">
+        <Header isCreateView={false} />
+        <div className="max-w-2xl mx-auto p-6 flex justify-center items-center" style={{ minHeight: 'calc(100vh - 64px)' }}>
+          <p className="text-gray-600">Loading prompt...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error || !prompt) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header isCreateView={false} />
+        <div className="max-w-2xl mx-auto p-6">
+          <div className="bg-red-50 text-red-700 p-4 rounded-md">
+            {error || 'Prompt not found.'}
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+            >
+              Go Back Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
-      {/* Main navigation - transparent header bar */}
       <Header isCreateView={false} />
       
-      {/* Content area - LIMITED WIDTH */}
       <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full">
         {/* Back link and Remix option row */}
         <div className="flex justify-between items-center mb-6">
-          <Link href="/" className="flex items-center text-sm text-gray-600 hover:text-gray-800">
-            <MdArrowBack className="mr-1" />
-            View All Prompts
-          </Link>
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center text-gray-600 hover:text-gray-900"
+          >
+            <MdOutlineArrowBack className="mr-1" />
+            Back to Prompts
+          </button>
           
           <div 
             className="flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
@@ -683,24 +617,77 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
           return null; // No warning needed
         })()}
         
-        <div className="bg-white rounded-lg border p-6">
-          <div className="mb-4">
-            <h1 className="text-2xl font-semibold">{prompt.title}</h1>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex justify-between items-start mb-4">
+            <h1 className="text-2xl font-bold">{prompt.title || 'Untitled Prompt'}</h1>
+            
+            <div className="flex space-x-2">
+              <button
+                onClick={handleCopy}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                title="Copy prompt"
+              >
+                {copied ? <MdCheck className="h-5 w-5 text-green-500" /> : <MdContentCopy className="h-5 w-5" />}
+              </button>
+              {/* Edit and delete buttons temporarily removed until admin authentication is implemented */}
+            </div>
           </div>
           
-          <div className="mb-6">
-            {/* Render the parsed prompt content */}
-            <div className="space-y-1 relative">
-              {/* Check if there are any follow-up sections to display the connecting line */}
-              {parsedContent.some(section => section.type === 'follow-up') && (
-                <div className="absolute top-12 left-6 w-0.5 bg-gray-200 h-[calc(100%-3rem)] -ml-2"></div>
-              )}
+          {/* Tags and categories */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {prompt.category && (
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  strokeWidth={1.5} 
+                  stroke="currentColor" 
+                  className="w-3 h-3 mr-1"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
+                  />
+                </svg>
+                {prompt.category}
+              </span>
+            )}
+            
+            {prompt.tags.filter(tag => tag !== prompt.category).map((tag, index) => (
+              <span 
+                key={index} 
+                className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center"
+              >
+                <span className="mr-1 font-medium">#</span>
+                {tag}
+              </span>
+            ))}
+          </div>
+          
+          {/* Prompt content */}
+          <div className="relative h-full">
+            {/* Vertical line */}
+            <div className="absolute top-12 left-4 w-0.5 bg-gray-200 h-[calc(100%-3rem)] -ml-2"></div>
+            
+            {/* Content with proper styling */}
+            <div 
+              className="font-mono whitespace-pre-wrap p-4 mb-4 relative" 
+              style={{ 
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                fontSize: '0.875rem',
+                lineHeight: '1.6'
+              }}
+            >
               {parsedContent.map((section, index) => renderPromptSection(section, index))}
             </div>
-            
-            <div className="flex justify-end mt-4">
-              {renderTags()}
-            </div>
+          </div>
+          
+          {/* Metadata */}
+          <div className="text-sm text-gray-500 border-t pt-4 mt-4">
+            <div>Created: {new Date(prompt.createdAt).toLocaleString()}</div>
+            <div>Last updated: {new Date(prompt.updatedAt).toLocaleString()}</div>
           </div>
         </div>
       </div>

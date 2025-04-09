@@ -36,25 +36,31 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log("POST /api/prompts - Request body:", body);
     
-    // Validate required fields
-    if (!body.title || !body.content) {
+    // Validate that content is required
+    if (!body.content) {
       return NextResponse.json(
-        { success: false, message: 'Title and content are required' },
+        { success: false, message: 'Content is required' },
         { status: 400 }
       );
     }
+    
+    // Use default title if not provided
+    const title = body.title || 'Untitled Prompt';
     
     // Ensure tags is an array
     const tags = Array.isArray(body.tags) ? body.tags : [];
     
     // Create the prompt
     const prompt = await GoogleSheetsAPI.prompts.add({
-      title: body.title,
+      title,
       content: body.content,
       tags,
       category: body.category,
     });
+    
+    console.log("Created prompt:", prompt);
     
     // Update tag counts
     const allPrompts = await GoogleSheetsAPI.prompts.getAll();

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { PromptService } from "@/lib/api/promptService";
+import { Prompt as GoogleSheetsPrompt } from "@/lib/googleSheets";
 
 // Add Material Design icons
 import { MdSearch, MdClose, MdAutoFixHigh, MdContentCopy, MdCheck, MdArrowBack } from "react-icons/md";
@@ -26,29 +28,51 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 
+// Updated type for prompts
+type Prompt = {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 // Initial example prompts
-const initialPrompts = [
+const initialPrompts: Prompt[] = [
   {
     id: "1",
-    content: "You are a professional content writer with expertise in [TOPIC]. Write a comprehensive blog post about [SUBJECT] that is engaging, informative, and optimized for SEO. The post should include a compelling introduction, 3-5 main sections with subheadings, and a conclusion."
+    title: "Content Writing",
+    content: "You are a professional content writer with expertise in [TOPIC]. Write a comprehensive blog post about [SUBJECT] that is engaging, informative, and optimized for SEO. The post should include a compelling introduction, 3-5 main sections with subheadings, and a conclusion.",
+    tags: ["writing", "blog", "SEO"],
+    category: "writing"
   },
   {
     id: "2",
     title: "Code Assistant",
-    content: "Act as an expert [PROGRAMMING_LANGUAGE] developer. I need help with [SPECIFIC_TASK]. Please provide clear, efficient, and well-commented code examples. Explain your approach and any important concepts or best practices I should be aware of."
+    content: "Act as an expert [PROGRAMMING_LANGUAGE] developer. I need help with [SPECIFIC_TASK]. Please provide clear, efficient, and well-commented code examples. Explain your approach and any important concepts or best practices I should be aware of.",
+    tags: ["development", "programming", "technical"],
+    category: "development"
   },
   {
     id: "3",
-    content: "Create a photorealistic image of [SUBJECT] with [STYLE] style. Include [ELEMENTS] in the scene with [LIGHTING] lighting and a [MOOD] atmosphere."
+    title: "Image Generation",
+    content: "Create a photorealistic image of [SUBJECT] with [STYLE] style. Include [ELEMENTS] in the scene with [LIGHTING] lighting and a [MOOD] atmosphere.",
+    tags: ["visual", "creative", "art"],
+    category: "visual"
   },
   {
     id: "4",
-    content: "I'd like you to act as a helpful, knowledgeable assistant. Please provide informative, well-reasoned, and balanced responses to my questions. If you're uncertain, acknowledge the limitations of your knowledge."
+    title: "AI Assistant",
+    content: "I'd like you to act as a helpful, knowledgeable assistant. Please provide informative, well-reasoned, and balanced responses to my questions. If you're uncertain, acknowledge the limitations of your knowledge.",
+    tags: ["AI", "assistant", "general"]
   },
   {
     id: "5",
     title: "Recipe Creator",
-    content: "Create a detailed recipe for [DISH] that serves [NUMBER] people. Include ingredients with measurements, step-by-step cooking instructions, preparation time, cooking time, and nutritional information."
+    content: "Create a detailed recipe for [DISH] that serves [NUMBER] people. Include ingredients with measurements, step-by-step cooking instructions, preparation time, cooking time, and nutritional information.",
+    tags: ["food", "cooking", "recipe"]
   }
 ];
 
@@ -382,7 +406,7 @@ const createPromptSyntaxHighlighter = () => {
 };
 
 export default function HomePage() {
-  const [prompts, setPrompts] = useState<typeof initialPrompts>([]);
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -404,6 +428,9 @@ export default function HomePage() {
   const router = useRouter();
   const [isRemixMode, setIsRemixMode] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Define the tutorial placeholder text
   const placeholderText = `# How to Create a Prompt
@@ -422,20 +449,50 @@ To create follow-up prompts that will display with circle indicators:
 2. Add your follow-up prompt text here
 3. Each numbered item becomes a follow-up prompt`;
 
-  // Load prompts from localStorage on component mount
+  // Load prompts from Google Sheets API on component mount
   useEffect(() => {
-    const savedPrompts = localStorage.getItem("promptGardenPrompts");
-    if (savedPrompts) {
+    const loadPrompts = async () => {
       try {
-        setPrompts(JSON.parse(savedPrompts));
-      } catch (e) {
-        console.error("Error parsing prompts from localStorage:", e);
-        setPrompts(initialPrompts);
+        // First try to get prompts from Google Sheets API
+        const apiPrompts = await PromptService.getAllPrompts();
+        
+        if (apiPrompts && apiPrompts.length > 0) {
+          // Use prompts from API
+          setPrompts(apiPrompts);
+        } else {
+          // Fall back to localStorage or initial prompts
+          const savedPrompts = localStorage.getItem("promptGardenPrompts");
+          if (savedPrompts) {
+            try {
+              setPrompts(JSON.parse(savedPrompts));
+            } catch (e) {
+              console.error("Error parsing prompts from localStorage:", e);
+              setPrompts(initialPrompts);
+            }
+          } else {
+            setPrompts(initialPrompts);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading prompts from API:", error);
+        // Fall back to localStorage or initial prompts
+        const savedPrompts = localStorage.getItem("promptGardenPrompts");
+        if (savedPrompts) {
+          try {
+            setPrompts(JSON.parse(savedPrompts));
+          } catch (e) {
+            console.error("Error parsing prompts from localStorage:", e);
+            setPrompts(initialPrompts);
+          }
+        } else {
+          setPrompts(initialPrompts);
+        }
+      } finally {
+        setIsLoaded(true);
       }
-    } else {
-      setPrompts(initialPrompts);
-    }
-    setIsLoaded(true);
+    };
+    
+    loadPrompts();
     
     // Check URL params for view
     const params = new URLSearchParams(window.location.search);
@@ -559,42 +616,63 @@ To create follow-up prompts that will display with circle indicators:
   }, [activeView]);
 
   // Add a new prompt
-  const addNewPrompt = () => {
-    // Find title from first heading, if present
-    let title = "";
-    const firstLine = newPromptContent.split('\n')[0];
-    if (firstLine && firstLine.startsWith('# ')) {
-      title = firstLine.substring(2).trim();
+  const addNewPrompt = async () => {
+    if (isSubmitting) return; // Prevent multiple submissions
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Find title from first heading, if present
+      let title = "";
+      const firstLine = newPromptContent.split('\n')[0];
+      if (firstLine && firstLine.startsWith('# ')) {
+        title = firstLine.substring(2).trim();
+      }
+      
+      // Create the prompt data object
+      const promptData = {
+        title: title || 'Untitled Prompt',
+        content: newPromptContent || placeholderText,
+        tags: selectedTags,
+        category: selectedCategory || undefined
+      };
+      
+      // Save to Google Sheets using the API
+      const createdPrompt = await PromptService.addPrompt(promptData);
+      
+      // Add to local state for immediate UI update
+      setPrompts([...prompts, {
+        id: createdPrompt.id,
+        title: createdPrompt.title,
+        content: createdPrompt.content,
+        tags: createdPrompt.tags,
+        category: createdPrompt.category,
+        createdAt: createdPrompt.createdAt,
+        updatedAt: createdPrompt.updatedAt
+      }]);
+      
+      // Reset form
+      setNewPromptTitle("");
+      setNewPromptContent("");
+      setSelectedTags([]);
+      setSelectedCategory(null);
+      setIsRemixMode(false);
+      
+      // Show success message or navigate to the prompt detail
+      setSuccessMessage(`Prompt "${createdPrompt.title}" saved successfully!`);
+      setShowSuccess(true);
+      setActiveView('browse'); // Switch to browse view
+      
+      // After 3 seconds, hide the success message
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+      alert('Failed to create prompt. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    const newPrompt: { id: string; title?: string; content: string; tags?: string[]; category?: string } = {
-      id: Date.now().toString(),
-      content: newPromptContent || placeholderText
-    };
-    
-    // Only add title if it's not empty
-    if (title) {
-      newPrompt.title = title;
-    }
-    
-    // Add tags if there are any
-    if (selectedTags.length > 0) {
-      newPrompt.tags = [...selectedTags];
-    }
-    
-    // Add category if selected
-    if (selectedCategory) {
-      newPrompt.category = selectedCategory;
-    }
-    
-    setPrompts([...prompts, newPrompt]);
-    
-    // Reset form
-    setNewPromptTitle("");
-    setNewPromptContent("");
-    setSelectedTags([]);
-    setSelectedCategory(null);
-    setIsRemixMode(false);
   };
 
   // Reset to initial prompts
@@ -658,7 +736,7 @@ To create follow-up prompts that will display with circle indicators:
   };
 
   // Get tags for a specific prompt
-  function getTagsForPrompt(prompt: (typeof initialPrompts)[0]): string[] {
+  function getTagsForPrompt(prompt: Prompt): string[] {
     // If prompt has tags property, use that
     if ('tags' in prompt && Array.isArray(prompt.tags)) {
       return prompt.tags;
@@ -682,7 +760,7 @@ To create follow-up prompts that will display with circle indicators:
   }
 
   // Get category for a specific prompt (some prompts may not have a category)
-  function getCategoryForPrompt(prompt: (typeof initialPrompts)[0]): string | null {
+  function getCategoryForPrompt(prompt: Prompt): string | null {
     // If prompt has category property, use that
     if ('category' in prompt && typeof prompt.category === 'string') {
       return prompt.category;
@@ -1015,7 +1093,7 @@ To create follow-up prompts that will display with circle indicators:
   };
 
   // Helper function to render a prompt
-  function renderPrompt(prompt: (typeof initialPrompts)[0]) {
+  function renderPrompt(prompt: Prompt) {
     // Get tags for this prompt
     const tags = getTagsForPrompt(prompt);
     
@@ -1395,20 +1473,20 @@ To create follow-up prompts that will display with circle indicators:
                                 Text after numbered items will be hidden. Add a blank line after a sequence to continue with regular text.
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      )}
-                      
+                    </div>
+                  </div>
+                )}
+                
                       <div className="mt-9 mb-6">
                         <p className="text-sm font-medium mb-2">Tags & Categories</p>
-                        <div className="border rounded-md p-2 flex flex-wrap gap-2 bg-white focus-within:ring-1 focus-within:ring-blue-500">
-                          {/* Selected tags */}
-                          {selectedTags.map((tag, index) => {
+                  <div className="border rounded-md p-2 flex flex-wrap gap-2 bg-white focus-within:ring-1 focus-within:ring-blue-500">
+                    {/* Selected tags */}
+                    {selectedTags.map((tag, index) => {
                             // Use category styling for category tags
                             const isTagCategory = isCategory(tag);
-                            return (
-                              <div 
-                                key={index}
+                      return (
+                        <div 
+                          key={index}
                                 className={`px-2 py-1 rounded-full text-xs flex items-center ${
                                   isTagCategory 
                                     ? `${getColorForTag(tag).bg} ${getColorForTag(tag).text}`
@@ -1433,17 +1511,17 @@ To create follow-up prompts that will display with circle indicators:
                                 ) : (
                                   <span className="mr-1 font-medium">#</span>
                                 )}
-                                <span>{tag}</span>
-                                <button 
-                                  type="button"
+                          <span>{tag}</span>
+                          <button 
+                            type="button"
                                   className="ml-1 hover:opacity-80"
-                                  onClick={() => removeTag(tag)}
-                                >
+                            onClick={() => removeTag(tag)}
+                          >
                                   <MdClose size={12} />
-                                </button>
-                              </div>
-                            );
-                          })}
+                          </button>
+                        </div>
+                      );
+                    })}
                     
                           {/* Category if selected */}
                           {selectedCategory && (
@@ -1478,21 +1556,21 @@ To create follow-up prompts that will display with circle indicators:
                           
                           {/* Tag input with help text */}
                           <div className="flex flex-1 items-center min-w-[120px]">
-                            <input
-                              type="text"
-                              value={tagInput}
-                              onChange={handleTagInputChange}
-                              onKeyDown={handleTagKeyDown}
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={handleTagInputChange}
+                      onKeyDown={handleTagKeyDown}
                               className="outline-none border-0 flex-1 text-sm font-mono tag-input"
                               placeholder="Type to add tags or categories..."
                               ref={tagInputRef}
                               tabIndex={2}
                             />
                           </div>
-                        </div>
+                  </div>
                   
                         {/* Tag/Category suggestions */}
-                        {suggestedTags.length > 0 && (
+                  {suggestedTags.length > 0 && (
                           <div className="mt-1 border rounded-md bg-white max-h-32 overflow-y-auto p-2">
                             {/* Group items by categories and tags */}
                             <div className="mb-2">
@@ -1502,8 +1580,8 @@ To create follow-up prompts that will display with circle indicators:
                                   <div className="text-xs text-gray-500 font-medium px-2 mb-1">Categories</div>
                                   {suggestedTags.filter(tag => isCategory(tag)).map((tag, index) => {
                                     const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
-                                    return (
-                                      <div 
+                        return (
+                          <div 
                                         key={`category-${index}`}
                                         className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
                                           isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
@@ -1558,38 +1636,43 @@ To create follow-up prompts that will display with circle indicators:
                                         className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
                                           isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
                                         }`}
-                                        onClick={() => addTag(tag)}
+                            onClick={() => addTag(tag)}
                                         data-suggestion-index={suggestedTags.indexOf(tag)}
-                                      >
+                          >
                                         <div className="flex items-center">
                                           <div 
                                             className="rounded-full px-2 py-0.5 text-xs mr-2 flex items-center bg-gray-100 text-gray-600"
                                           >
                                             <span className="mr-1 font-medium">#</span>
-                                            {tag}
+                            {tag}
                                           </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
+                          </div>
+                        );
+                      })}
                                 </div>
                               )}
                             </div>
-                          </div>
-                        )}
-                      </div>
-                      
+                    </div>
+                  )}
+                </div>
+                
                       <div className="mt-6 flex justify-center flex-col items-center">
                         <Button 
                           onClick={addNewPrompt}
                           className="max-w-xs w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          disabled={isSubmitting}
                         >
-                          {isRemixMode ? "Save Remix" : "Add Prompt"}
-                        </Button>
+                    {isSubmitting 
+                      ? "Saving..." 
+                      : isRemixMode 
+                        ? "Save Remix" 
+                        : "Add Prompt"}
+                  </Button>
                         <div className="text-xs text-gray-400 mt-2">
                           Press <kbd className="px-1 py-0.5 bg-gray-100 rounded border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded border">Enter</kbd> to submit
-                        </div>
-                      </div>
+                </div>
+              </div>
                     </div>
                   </div>
                 </div>
@@ -1598,6 +1681,11 @@ To create follow-up prompts that will display with circle indicators:
           }
         </div>
       </div>
+      {showSuccess && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-50 animate-fadeIn">
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 }

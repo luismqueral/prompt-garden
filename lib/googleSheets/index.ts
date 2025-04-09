@@ -13,6 +13,9 @@ export * from './tags';
 // Export setup functionality
 export * from './setup';
 
+// Export the debug functions
+export { getRawPromptData } from './test-debug';
+
 // Export a convenient API for external use
 import { GOOGLE_SHEETS_CONFIG } from './config';
 import { initializeGoogleSheet } from './setup';

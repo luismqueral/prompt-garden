@@ -32,19 +32,22 @@ export async function getAllPrompts(): Promise<Prompt[]> {
     
     const rows = response.data.values || [];
     
-    // Convert rows to Prompt objects
-    return rows.map(row => {
+    // Convert rows to Prompt objects with validation
+    return rows.filter(row => row.length > 0).map((row) => {
+      // Destructure row fields with proper validation
       const [id, title, content, tagsString, category, createdAt, updatedAt] = row;
-      const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()) : [];
+      
+      // Parse tags
+      const tags = tagsString ? tagsString.split(',').map((tag: string) => tag.trim()) : [];
       
       return {
-        id,
-        title,
-        content,
+        id: id || '',
+        title: title || '',
+        content: content || '',
         tags,
         category: category || undefined,
-        createdAt,
-        updatedAt,
+        createdAt: createdAt || new Date().toISOString(),
+        updatedAt: updatedAt || new Date().toISOString(),
       };
     });
   } catch (error) {

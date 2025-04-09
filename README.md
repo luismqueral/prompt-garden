@@ -98,3 +98,33 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Google Sheets Integration
+
+This project uses Google Sheets as a database to store prompts, tags, and categories. The integration includes:
+
+- Storage of prompts in a structured format
+- Automatic tracking of tags and their usage count
+- Support for categories to organize prompts
+
+### Data Structure
+
+The Google Sheets integration uses a specific data structure:
+
+1. **Prompts Sheet**:
+   - Columns: ID, Title, Content, Tags, Category, Created At, Updated At
+   - Each prompt is stored in a single row
+   - Tags are stored as comma-separated values
+
+2. **Tags Sheet**:
+   - Columns: Name, Count, Is Category
+   - Tracks usage count of each tag
+   - Flags whether a tag is also a category
+
+### Troubleshooting
+
+If you encounter data alignment issues, you can use the fix-data endpoint to realign your data:
+```
+curl http://localhost:3000/api/fix-data
+```
+This endpoint will reformat all prompts with proper column alignment.
