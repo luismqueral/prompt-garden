@@ -162,60 +162,55 @@ export default function PromptDetailPage() {
   };
   
   // Check if a tag is a category
-  function isCategory(tag: string): boolean {
-    // Define the list of categories that should be colored
-    const categories = [
-      "writing", "development", "visual", "ai", "creative", "education", 
-      "marketing", "research", "business", "productivity", "entertainment"
-    ];
-    return categories.includes(tag.toLowerCase());
-  }
+  const isCategory = (tag: string): boolean => {
+    // Check if the tag matches the prompt's category
+    return prompt?.category?.toLowerCase() === tag.toLowerCase();
+  };
   
   // Get color for a specific tag (consistent pastel colors)
   function getColorForTag(tag: string): { bg: string; text: string } {
     // Normalize tag to lowercase for consistent mapping
     const normalizedTag = tag.toLowerCase();
     
-    // Map of tags to color combinations (pastel backgrounds with appropriate text colors)
-    const colorMap: Record<string, { bg: string; text: string }> = {
-      "writing": { bg: "bg-pink-100", text: "text-pink-800" },
-      "blog": { bg: "bg-rose-100", text: "text-rose-800" },
-      "seo": { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
-      
-      "development": { bg: "bg-blue-100", text: "text-blue-800" },
-      "programming": { bg: "bg-indigo-100", text: "text-indigo-800" },
-      "technical": { bg: "bg-sky-100", text: "text-sky-800" },
-      
-      "visual": { bg: "bg-green-100", text: "text-green-800" },
-      "creative": { bg: "bg-emerald-100", text: "text-emerald-800" },
-      "art": { bg: "bg-teal-100", text: "text-teal-800" },
-      
-      "food": { bg: "bg-orange-100", text: "text-orange-800" },
-      "cooking": { bg: "bg-amber-100", text: "text-amber-800" },
-      "recipe": { bg: "bg-yellow-100", text: "text-yellow-800" },
-      
-      "ai": { bg: "bg-purple-100", text: "text-purple-800" },
-      "assistant": { bg: "bg-violet-100", text: "text-violet-800" },
-      "general": { bg: "bg-slate-100", text: "text-slate-800" },
-      
-      "education": { bg: "bg-cyan-100", text: "text-cyan-800" },
-      "marketing": { bg: "bg-red-100", text: "text-red-800" },
-      "research": { bg: "bg-lime-100", text: "text-lime-800" },
-      "business": { bg: "bg-pink-100", text: "text-pink-800" },
-      "productivity": { bg: "bg-blue-100", text: "text-blue-800" },
-      "entertainment": { bg: "bg-violet-100", text: "text-violet-800" },
-      
-      "prompt": { bg: "bg-gray-100", text: "text-gray-800" },
-      "custom": { bg: "bg-stone-100", text: "text-stone-800" }
-    };
+    // Generate consistent color based on tag string
+    const colors = [
+      { bg: "bg-pink-100", text: "text-pink-800" },
+      { bg: "bg-rose-100", text: "text-rose-800" },
+      { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
+      { bg: "bg-blue-100", text: "text-blue-800" },
+      { bg: "bg-indigo-100", text: "text-indigo-800" },
+      { bg: "bg-sky-100", text: "text-sky-800" },
+      { bg: "bg-green-100", text: "text-green-800" },
+      { bg: "bg-emerald-100", text: "text-emerald-800" },
+      { bg: "bg-teal-100", text: "text-teal-800" },
+      { bg: "bg-orange-100", text: "text-orange-800" },
+      { bg: "bg-amber-100", text: "text-amber-800" },
+      { bg: "bg-yellow-100", text: "text-yellow-800" },
+      { bg: "bg-purple-100", text: "text-purple-800" },
+      { bg: "bg-violet-100", text: "text-violet-800" },
+      { bg: "bg-slate-100", text: "text-slate-800" },
+      { bg: "bg-cyan-100", text: "text-cyan-800" },
+      { bg: "bg-red-100", text: "text-red-800" },
+      { bg: "bg-lime-100", text: "text-lime-800" }
+    ];
     
-    // For categories, ensure they have a color - if not found, give a distinct color
-    if (isCategory(normalizedTag) && !colorMap[normalizedTag]) {
+    // Get a consistent hash code for the tag
+    let hashCode = 0;
+    for (let i = 0; i < normalizedTag.length; i++) {
+      hashCode = (hashCode << 5) - hashCode + normalizedTag.charCodeAt(i);
+      hashCode = hashCode & hashCode; // Convert to 32bit integer
+    }
+    
+    // Use the hash to select a color
+    const colorIndex = Math.abs(hashCode) % colors.length;
+    
+    // For categories, use a specific set of colors to ensure they stand out
+    if (isCategory(normalizedTag)) {
       return { bg: "bg-cyan-100", text: "text-cyan-800" };
     }
     
-    // Return the color combination for the tag or a default
-    return colorMap[normalizedTag] || { bg: "bg-gray-100", text: "text-gray-800" };
+    // Return the color for the tag
+    return colors[colorIndex];
   }
 
   // Function to copy text to clipboard

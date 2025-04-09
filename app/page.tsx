@@ -40,41 +40,7 @@ type Prompt = {
 };
 
 // Initial example prompts
-const initialPrompts: Prompt[] = [
-  {
-    id: "1",
-    title: "Content Writing",
-    content: "You are a professional content writer with expertise in [TOPIC]. Write a comprehensive blog post about [SUBJECT] that is engaging, informative, and optimized for SEO. The post should include a compelling introduction, 3-5 main sections with subheadings, and a conclusion.",
-    tags: ["writing", "blog", "SEO"],
-    category: "writing"
-  },
-  {
-    id: "2",
-    title: "Code Assistant",
-    content: "Act as an expert [PROGRAMMING_LANGUAGE] developer. I need help with [SPECIFIC_TASK]. Please provide clear, efficient, and well-commented code examples. Explain your approach and any important concepts or best practices I should be aware of.",
-    tags: ["development", "programming", "technical"],
-    category: "development"
-  },
-  {
-    id: "3",
-    title: "Image Generation",
-    content: "Create a photorealistic image of [SUBJECT] with [STYLE] style. Include [ELEMENTS] in the scene with [LIGHTING] lighting and a [MOOD] atmosphere.",
-    tags: ["visual", "creative", "art"],
-    category: "visual"
-  },
-  {
-    id: "4",
-    title: "AI Assistant",
-    content: "I'd like you to act as a helpful, knowledgeable assistant. Please provide informative, well-reasoned, and balanced responses to my questions. If you're uncertain, acknowledge the limitations of your knowledge.",
-    tags: ["AI", "assistant", "general"]
-  },
-  {
-    id: "5",
-    title: "Recipe Creator",
-    content: "Create a detailed recipe for [DISH] that serves [NUMBER] people. Include ingredients with measurements, step-by-step cooking instructions, preparation time, cooking time, and nutritional information.",
-    tags: ["food", "cooking", "recipe"]
-  }
-];
+const initialPrompts: Prompt[] = [];
 
 // Helper function to highlight syntax in prompt text
 const highlightPromptSyntax = (text: string): React.ReactNode[] => {
@@ -453,40 +419,12 @@ To create follow-up prompts that will display with circle indicators:
   useEffect(() => {
     const loadPrompts = async () => {
       try {
-        // First try to get prompts from Google Sheets API
+        // Get prompts from Google Sheets API
         const apiPrompts = await PromptService.getAllPrompts();
-        
-        if (apiPrompts && apiPrompts.length > 0) {
-          // Use prompts from API
-          setPrompts(apiPrompts);
-        } else {
-          // Fall back to localStorage or initial prompts
-          const savedPrompts = localStorage.getItem("promptGardenPrompts");
-          if (savedPrompts) {
-            try {
-              setPrompts(JSON.parse(savedPrompts));
-            } catch (e) {
-              console.error("Error parsing prompts from localStorage:", e);
-              setPrompts(initialPrompts);
-            }
-          } else {
-            setPrompts(initialPrompts);
-          }
-        }
+        setPrompts(apiPrompts);
       } catch (error) {
         console.error("Error loading prompts from API:", error);
-        // Fall back to localStorage or initial prompts
-        const savedPrompts = localStorage.getItem("promptGardenPrompts");
-        if (savedPrompts) {
-          try {
-            setPrompts(JSON.parse(savedPrompts));
-          } catch (e) {
-            console.error("Error parsing prompts from localStorage:", e);
-            setPrompts(initialPrompts);
-          }
-        } else {
-          setPrompts(initialPrompts);
-        }
+        setPrompts([]);
       } finally {
         setIsLoaded(true);
       }
@@ -742,44 +680,19 @@ To create follow-up prompts that will display with circle indicators:
       return prompt.tags;
     }
     
-    // Fallback to default tags for example prompts
-    if (prompt.id === "1") {
-      return ["writing", "blog", "SEO"];
-    } else if (prompt.id === "2") {
-      return ["development", "programming", "technical"];
-    } else if (prompt.id === "3") {
-      return ["visual", "creative", "art"];
-    } else if (prompt.id === "4") {
-      return ["AI", "assistant", "general"];
-    } else if (prompt.id === "5") {
-      return ["food", "cooking", "recipe"];
-    } else {
-      // Default tags for new prompts
-      return ["prompt", "AI", "custom"];
-    }
+    // Empty array if no tags
+    return [];
   }
 
-  // Get category for a specific prompt (some prompts may not have a category)
+  // Get category for a specific prompt
   function getCategoryForPrompt(prompt: Prompt): string | null {
     // If prompt has category property, use that
     if ('category' in prompt && typeof prompt.category === 'string') {
       return prompt.category;
     }
     
-    // Fallback to default categories for example prompts
-    if (prompt.id === "1") {
-      return "writing";
-    } else if (prompt.id === "2") {
-      return "development";
-    } else if (prompt.id === "3") {
-      return "visual";
-    } else if (prompt.id === "4" || prompt.id === "5") {
-      // No category for these examples
-      return null;
-    } else {
-      // 50% chance of having no category for custom prompts
-      return Math.random() > 0.5 ? "AI" : null;
-    }
+    // No category if not defined
+    return null;
   }
 
   // Get color for a specific tag (consistent pastel colors)
@@ -787,62 +700,62 @@ To create follow-up prompts that will display with circle indicators:
     // Normalize tag to lowercase for consistent mapping
     const normalizedTag = tag.toLowerCase();
     
-    // Map of tags to color combinations (pastel backgrounds with appropriate text colors)
-    const colorMap: Record<string, { bg: string; text: string }> = {
-      "writing": { bg: "bg-pink-100", text: "text-pink-800" },
-      "blog": { bg: "bg-rose-100", text: "text-rose-800" },
-      "seo": { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
-      
-      "development": { bg: "bg-blue-100", text: "text-blue-800" },
-      "programming": { bg: "bg-indigo-100", text: "text-indigo-800" },
-      "technical": { bg: "bg-sky-100", text: "text-sky-800" },
-      
-      "visual": { bg: "bg-green-100", text: "text-green-800" },
-      "creative": { bg: "bg-emerald-100", text: "text-emerald-800" },
-      "art": { bg: "bg-teal-100", text: "text-teal-800" },
-      
-      "food": { bg: "bg-orange-100", text: "text-orange-800" },
-      "cooking": { bg: "bg-amber-100", text: "text-amber-800" },
-      "recipe": { bg: "bg-yellow-100", text: "text-yellow-800" },
-      
-      "ai": { bg: "bg-purple-100", text: "text-purple-800" },
-      "assistant": { bg: "bg-violet-100", text: "text-violet-800" },
-      "general": { bg: "bg-slate-100", text: "text-slate-800" },
-      
-      "education": { bg: "bg-cyan-100", text: "text-cyan-800" },
-      "marketing": { bg: "bg-red-100", text: "text-red-800" },
-      "research": { bg: "bg-lime-100", text: "text-lime-800" },
-      "business": { bg: "bg-pink-100", text: "text-pink-800" },
-      "productivity": { bg: "bg-blue-100", text: "text-blue-800" },
-      "entertainment": { bg: "bg-violet-100", text: "text-violet-800" },
-      
-      "prompt": { bg: "bg-gray-100", text: "text-gray-800" },
-      "custom": { bg: "bg-stone-100", text: "text-stone-800" }
-    };
+    // Generate consistent color based on tag string
+    const colors = [
+      { bg: "bg-pink-100", text: "text-pink-800" },
+      { bg: "bg-rose-100", text: "text-rose-800" },
+      { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
+      { bg: "bg-blue-100", text: "text-blue-800" },
+      { bg: "bg-indigo-100", text: "text-indigo-800" },
+      { bg: "bg-sky-100", text: "text-sky-800" },
+      { bg: "bg-green-100", text: "text-green-800" },
+      { bg: "bg-emerald-100", text: "text-emerald-800" },
+      { bg: "bg-teal-100", text: "text-teal-800" },
+      { bg: "bg-orange-100", text: "text-orange-800" },
+      { bg: "bg-amber-100", text: "text-amber-800" },
+      { bg: "bg-yellow-100", text: "text-yellow-800" },
+      { bg: "bg-purple-100", text: "text-purple-800" },
+      { bg: "bg-violet-100", text: "text-violet-800" },
+      { bg: "bg-slate-100", text: "text-slate-800" },
+      { bg: "bg-cyan-100", text: "text-cyan-800" },
+      { bg: "bg-red-100", text: "text-red-800" },
+      { bg: "bg-lime-100", text: "text-lime-800" }
+    ];
     
-    // For categories, ensure they have a color - if not found, give a distinct color
-    if (isCategory(normalizedTag) && !colorMap[normalizedTag]) {
+    // Get a consistent hash code for the tag
+    let hashCode = 0;
+    for (let i = 0; i < normalizedTag.length; i++) {
+      hashCode = (hashCode << 5) - hashCode + normalizedTag.charCodeAt(i);
+      hashCode = hashCode & hashCode; // Convert to 32bit integer
+    }
+    
+    // Use the hash to select a color
+    const colorIndex = Math.abs(hashCode) % colors.length;
+    
+    // For categories, use a specific set of colors to ensure they stand out
+    if (isCategory(normalizedTag)) {
       return { bg: "bg-cyan-100", text: "text-cyan-800" };
     }
     
-    // Return the color combination for the tag or a default
-    return colorMap[normalizedTag] || { bg: "bg-gray-100", text: "text-gray-800" };
+    // Return the color for the tag
+    return colors[colorIndex];
   }
 
   // Get all available tags
   const getAllAvailableTags = (): string[] => {
     const allTags = new Set<string>();
     
-    // Add default tag categories
-    [
-      // Categories
-      "writing", "development", "visual", "ai", "creative", "education", 
-      "marketing", "research", "business", "productivity", "entertainment",
-      // Tags
-      "prompt", "custom", "blog", "SEO", "programming", "technical", 
-      "art", "assistant", "general", "food", "cooking", "recipe"
-    ].forEach(tag => {
-      allTags.add(tag.toLowerCase());
+    // Get all tags from prompts
+    prompts.forEach(prompt => {
+      if (Array.isArray(prompt.tags)) {
+        prompt.tags.forEach(tag => {
+          allTags.add(tag.toLowerCase());
+        });
+      }
+      
+      if (prompt.category) {
+        allTags.add(prompt.category.toLowerCase());
+      }
     });
     
     return Array.from(allTags);
@@ -1030,8 +943,13 @@ To create follow-up prompts that will display with circle indicators:
 
   // Helper function to strip special tags for preview display
   const stripSpecialTags = (content: string): string => {
+    if (!content) return '';
+    
+    // Remove title lines starting with #
+    let result = content.replace(/^#\s+.*$/gm, '').trim();
+    
     // Remove context tags without leaving extra whitespace
-    let result = content.replace(/<context>[\s\S]*?<\/context>/g, '');
+    result = result.replace(/<context>[\s\S]*?<\/context>/g, '');
     
     // Remove any context markers that might have been inserted
     result = result.replace(/\{\{CONTEXT_START\}\}[\s\S]*?\{\{CONTEXT_END\}\}/g, '');
@@ -1052,39 +970,26 @@ To create follow-up prompts that will display with circle indicators:
       }
     });
     
-    // Filter out any lines that are numbered items and any text after numbered sequences
-    let inNumberedSequence = false;
-    const filteredLines = lines.filter((line, index) => {
-      // Check if this is a numbered line
-      const isNumberedLine = numberedLines.has(index);
+    // Only keep content until the first numbered item
+    let processedLines: string[] = [];
+    let foundNumberedLine = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const isNumberedLine = numberedLines.has(i);
       
-      // If we encounter a numbered line, mark that we're in a numbered sequence
       if (isNumberedLine) {
-        inNumberedSequence = true;
-        return false; // Skip this line
+        foundNumberedLine = true;
+        break; // Stop processing at first numbered line
       }
       
-      // If we're in a numbered sequence
-      if (inNumberedSequence) {
-        // Check if line is a blank line, a note, or another numbered item - these end the sequence
-        const isBlankLine = line.trim() === '';
-        const isNote = line.trim().startsWith('>');
-        const isAnotherNumbered = numberedLines.has(index);
-        
-        if (isBlankLine || isNote || isAnotherNumbered) {
-          inNumberedSequence = false;
-          return true; // Keep these lines
-        }
-        
-        return false; // Skip all lines in a numbered sequence
+      if (!foundNumberedLine) {
+        processedLines.push(line);
       }
-      
-      // Keep all other lines
-      return true;
-    });
+    }
     
     // Join the filtered lines back into a string
-    result = filteredLines.join('\n');
+    result = processedLines.join('\n');
     
     // Clean up any double line breaks that might have been created
     result = result.replace(/\n\s*\n\s*\n/g, '\n\n');
@@ -1256,12 +1161,10 @@ To create follow-up prompts that will display with circle indicators:
 
   // Check if a tag is a category
   function isCategory(tag: string): boolean {
-    // Define the list of categories that should be colored
-    const categories = [
-      "writing", "development", "visual", "ai", "creative", "education", 
-      "marketing", "research", "business", "productivity", "entertainment"
-    ];
-    return categories.includes(tag.toLowerCase());
+    // Check if the tag exists as a category on any prompt
+    return prompts.some(prompt => 
+      prompt.category && prompt.category.toLowerCase() === tag.toLowerCase()
+    );
   }
 
   // CodeMirror onChange handler
