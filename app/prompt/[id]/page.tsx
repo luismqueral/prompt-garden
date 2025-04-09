@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PromptService } from '@/lib/api/promptService';
 import { Header } from '@/components/header';
-import { MdContentCopy, MdCheck, MdOutlineArrowBack, MdShuffle } from "react-icons/md";
+import { MdOutlineArrowBack, MdContentCopy, MdCheck } from "react-icons/md";
+import Link from 'next/link';
 
 // Type definition for Prompt
 interface Prompt {
@@ -17,21 +18,13 @@ interface Prompt {
   updatedAt: string;
 }
 
-// Interface for parsed prompt sections
-interface ParsedPromptSection {
-  type: 'regular' | 'context' | 'follow-up';
-  content: string;
-  index?: number;
-}
-
 export default function PromptDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [parsedContent, setParsedContent] = useState<ParsedPromptSection[]>([]);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
   
   // Get the prompt ID from URL params
   const promptId = params.id as string;
@@ -50,9 +43,6 @@ export default function PromptDetailPage() {
         
         const fetchedPrompt = await PromptService.getPromptById(promptId);
         setPrompt(fetchedPrompt);
-        
-        // Parse the prompt content for special sections
-        setParsedContent(parsePromptContent(fetchedPrompt.content));
       } catch (error) {
         console.error('Error fetching prompt:', error);
         setError('Failed to load prompt. It may have been deleted or does not exist.');
@@ -64,471 +54,184 @@ export default function PromptDetailPage() {
     fetchPrompt();
   }, [promptId, router]);
   
-  // Handle copy to clipboard
-  const handleCopy = () => {
-    if (!prompt) return;
+  // Extract and process the prompt content with inline notes
+  const processPromptContent = (content: string): { 
+    mainPromptLines: Array<{type: 'text' | 'note', content: string}>,
+    followUps: Array<{
+      content: string, 
+      notes: string[]
+    }>
+  } => {
+    if (!content) return { mainPromptLines: [], followUps: [] };
     
-    navigator.clipboard.writeText(prompt.content)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(err => {
-        console.error('Failed to copy text: ', err);
-      });
-  };
-
-  // Handling the remix function
-  const handleRemix = () => {
-    if (!prompt) return;
-    
-    try {
-      // Store the original content in sessionStorage temporarily
-      sessionStorage.setItem("remixPromptContent", prompt.content);
-      sessionStorage.setItem("remixPromptTitle", `${prompt.title || 'Untitled Prompt'} (Remix)`);
-      // Also store the tags from the original prompt
-      sessionStorage.setItem("remixPromptTags", JSON.stringify(prompt.tags));
-      // Set a flag to focus and select the content textarea instead of the title
-      sessionStorage.setItem("focusAndSelectContent", "true");
-      
-      // Navigate to create page
-      router.push("/prompt/new");
-    } catch (e) {
-      console.error("Error preparing remix:", e);
-    }
-  };
-
-  // Parse prompt content to identify special sections
-  const parsePromptContent = (content: string): ParsedPromptSection[] => {
-    if (!content) return [];
-
-    // Pre-process to remove text after numbered sequences
-    let processedContent = content;
-    
-    // Split content by lines to process follow-up sequences
     const lines = content.split('\n');
+    const mainPromptLines: Array<{type: 'text' | 'note', content: string}> = [];
+    const followUps: Array<{ content: string, notes: string[] }> = [];
     
-    // First identify all numbered lines
-    const numberedLines = new Set<number>();
-    lines.forEach((line, index) => {
-      if (/^\d+\.\s+.*/.test(line)) {
-        numberedLines.add(index);
-      }
-    });
-    
-    // Then filter out text after numbered sequences
+    let currentFollowUp = '';
+    let currentFollowUpNotes: string[] = [];
     let inNumberedSequence = false;
-    const filteredLines = lines.filter((line, index) => {
-      // Check if this is a numbered line
-      const isNumberedLine = numberedLines.has(index);
+    const numberPattern = /^\d+\.\s+(.*)/;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      // If we encounter a numbered line, mark that we're in a numbered sequence
-      if (isNumberedLine) {
-        inNumberedSequence = true;
-        return true; // Keep numbered lines
+      // Check if this is a title line (starting with #)
+      if (line.trim().match(/^#\s+.*$/)) {
+        continue; // Skip title lines
       }
       
-      // If we're in a numbered sequence
-      if (inNumberedSequence) {
-        // Check if line is a blank line, a note, or another numbered item - these end the sequence
-        const isBlankLine = line.trim() === '';
-        const isNote = line.trim().startsWith('>');
-        const isAnotherNumbered = numberedLines.has(index);
-        
-        if (isBlankLine || isNote || isAnotherNumbered) {
-          inNumberedSequence = false;
-          return true; // Keep these lines
-        }
-        
-        return false; // Skip all lines in a numbered sequence
-      }
-      
-      // Keep all other lines
-      return true;
-    });
-    
-    // Join the filtered lines back into a string
-    processedContent = filteredLines.join('\n');
-    
-    const sections: ParsedPromptSection[] = [];
-    
-    // Normalize line endings and split the content by double newlines
-    const blocks = processedContent.replace(/\r\n/g, '\n').split(/\n\n+/);
-    
-    blocks.forEach(block => {
-      // Process follow-up prompts in this block
-      processBlockContent(block, sections);
-    });
-    
-    return sections;
-  };
-  
-  // Helper to process a block of content for special sections
-  const processBlockContent = (block: string, sections: ParsedPromptSection[]) => {
-    // First extract any numbered follow-ups
-    const followUpMatches = block.match(/\n(\d+)\.\s+(.*?)(?=\n\d+\.\s+|\n>|\n```|$)/g);
-    
-    if (followUpMatches && followUpMatches.length > 0) {
-      // Extract the main content before any follow-ups
-      const mainContent = block.split(followUpMatches[0])[0].trim();
-      
-      if (mainContent) {
-        // Process the main content for context notes
-        sections.push({
-          type: 'regular',
-          content: processContextAnnotations(mainContent)
-        });
-      }
-      
-      // Process each follow-up
-      followUpMatches.forEach(match => {
-        const numberMatch = match.match(/\n(\d+)\.\s+/);
-        if (numberMatch) {
-          const index = parseInt(numberMatch[1], 10);
-          const content = match.replace(/\n\d+\.\s+/, "").trim();
-          
-          if (content) {
-            sections.push({
-              type: 'follow-up',
-              content: content,
-              index: index
-            });
-          }
-        }
-      });
-    } else {
-      // No follow-ups, check for context notes
-      sections.push({
-        type: 'regular',
-        content: processContextAnnotations(block)
-      });
-    }
-  };
-  
-  // Helper function to process context annotations within a section
-  const processContextAnnotations = (text: string): string => {
-    // Process context notes using ">" prefix - use RegExp constructor to avoid 's' flag
-    const contextRegex = new RegExp('\\n>\\s+(.*?)(?=\\n>|\\n```|\\n\\d+\\.|\\n\\n|$)', 'g');
-    return text.replace(contextRegex, (match, contextContent) => {
-      return `{{CONTEXT_START}}${contextContent.trim()}{{CONTEXT_END}}`;
-    });
-  };
-
-  // Helper function to process and style variable syntax for text in [brackets]
-  const processVariableSyntax = (text: string): React.ReactNode[] => {
-    // Split text by [variable] pattern
-    const parts = text.split(/(\[[^\]]+\])/g);
-    
-    if (parts.length === 1) {
-      // No variables found
-      return [text];
-    }
-    
-    // Transform each part
-    return parts.map((part, index) => {
-      if (part.match(/^\[[^\]]+\]$/)) {
-        // It's a variable in brackets - convert to uppercase and style
-        const variableText = part.slice(1, -1).toUpperCase();
-        return (
-          <span key={index} className="text-emerald-700 font-medium uppercase">
-            {variableText}
-          </span>
-        );
-      }
-      return part;
-    });
-  };
-
-  // Helper function to process regular content with context notes and numbered sequences
-  const renderRegularSection = (content: string, index: number): React.ReactNode => {
-    // First, check if this is a numbered sequence
-    const numberedMatch = content.match(/^(\d+)\.\s+(.*)/);
-
-    if (numberedMatch) {
-      const number = numberedMatch[1];
-      const restContent = numberedMatch[2];
-      
-      // Split the content into lines to process
-      const lines = restContent.split('\n');
-      
-      // First identify sequence terminators
-      const sequenceEndIndices: number[] = [];
-      
-      lines.forEach((line, lineIndex) => {
-        // Consider these patterns as sequence terminators
-        if (
-          /^\d+\.\s+.*/.test(line) || // Another numbered item
-          /^\[context:/.test(line) || // Context note
-          /^```/.test(line.trim()) || // Code block 
-          /^#/.test(line.trim()) // Heading
-        ) {
-          sequenceEndIndices.push(lineIndex);
-        }
-      });
-      
-      let inNumberedSequence = true;
-      let result: React.ReactNode[] = [];
-      
-      // Add the number and first line
-      result.push(
-        <div key={`${index}-number`} className="flex items-start group">
-          <span className="mr-2 font-bold text-gray-600">{number}.</span>
-          <div className="flex-grow">
-            {processVariableSyntax(lines[0])}
-          </div>
-        </div>
-      );
-      
-      // Process remaining lines
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Check if this is a blank line
-        const isBlankLine = line.trim() === '';
-        
-        // Check if this is a sequence terminator
-        const isTerminator = sequenceEndIndices.includes(i);
-        
-        if (isTerminator) {
-          inNumberedSequence = false;
-        }
-        
-        if (isBlankLine && inNumberedSequence) {
-          // Just add a blank line without ending the sequence
-          result.push(
-            <div key={`${index}-line-${i}`}>
-              &nbsp;
-            </div>
-          );
-          continue;
-        }
+      // Check if this is a note line (starting with >)
+      if (line.trim().startsWith('>')) {
+        const noteContent = line.trim().replace(/^>\s?/, '');
         
         if (inNumberedSequence) {
-          // This is content after a numbered sequence - display with strikethrough
-          result.push(
-            <div key={`${index}-line-${i}`} className="pl-8 bg-yellow-50 border-l-4 border-yellow-200">
-              <div className="flex items-start">
-                <div className="text-yellow-700 line-through opacity-60">
-                  {processVariableSyntax(line)}
-                </div>
-              </div>
-            </div>
-          );
+          // Add to current follow-up notes
+          currentFollowUpNotes.push(noteContent);
         } else {
-          // Regular line after sequence ended
-          result.push(
-            <div key={`${index}-line-${i}`}>
-              {processVariableSyntax(line)}
-            </div>
-          );
+          // Add to main prompt notes
+          mainPromptLines.push({ type: 'note', content: noteContent });
         }
+        continue;
       }
       
-      return <div key={`section-${index}`}>{result}</div>;
-    }
-
-    // Process regular content with context notes
-    const contextNoteRegex = /\{\{CONTEXT_START\}\}(.*?)\{\{CONTEXT_END\}\}/g;
-    let match;
-    const result: React.ReactNode[] = [];
-    let lastIndex = 0;
-
-    // Finding all context notes
-    while ((match = contextNoteRegex.exec(content)) !== null) {
-      const fullMatch = match[0];
-      const contextContent = match[1];
-      const matchStart = match.index;
-      const matchIndex = result.length; // Create a unique key for each match
-
-      // Add content before this context note
-      if (matchStart > lastIndex) {
-        result.push(
-          <span key={`${index}-text-${matchIndex}`} className="block">
-            {processVariableSyntax(content.substring(lastIndex, matchStart))}
-          </span>
-        );
-      }
-
-      // Add the context note
-      result.push(
-        <span key={`${index}-context-${matchIndex}`} className="block pl-3 py-2 my-2 border-l-4 border-gray-300 bg-gray-50 text-gray-600 text-sm">
-          {contextContent.trim()}
-        </span>
-      );
-
-      lastIndex = matchStart + fullMatch.length;
-    }
-
-    // Add any remaining content after the last context note
-    if (lastIndex < content.length) {
-      result.push(
-        <span key={`${index}-text-last`} className="block">
-          {processVariableSyntax(content.substring(lastIndex))}
-        </span>
-      );
-    }
-
-    // If we didn't find any context notes, just return the original content
-    if (result.length === 0) {
-      return <span key={`section-${index}`}>{processVariableSyntax(content)}</span>;
-    }
-
-    return <div key={`section-${index}`}>{result}</div>;
-  };
-
-  // Function to handle copying prompt sections to clipboard
-  const handleCopyPrompt = (text: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    // Get the target element safely
-    const targetDiv = e.currentTarget as HTMLElement;
-    if (!targetDiv) {
-      console.error('Target element not found');
-      return;
-    }
-    
-    // Clean the text by removing any remaining context markers and text after sequences
-    let cleanedText = text
-      .replace(/\{\{CONTEXT_START\}\}[\s\S]*?\{\{CONTEXT_END\}\}/g, '')
-      .replace(/<context>[\s\S]*?<\/context>/g, '');
-      
-    // Filter out text after numbered sequences
-    const lines = cleanedText.split('\n');
-    
-    // First identify all numbered lines
-    const numberedLines = new Set<number>();
-    lines.forEach((line, index) => {
-      if (/^\d+\.\s+.*/.test(line)) {
-        numberedLines.add(index);
-      }
-    });
-    
-    // Then filter out all text after numbered sequences until a blank line or new section
-    let inNumberedSequence = false;
-    const filteredLines = lines.filter((line, index) => {
-      // Check if this is a numbered line
-      const isNumberedLine = numberedLines.has(index);
-      
-      // If we encounter a numbered line, mark that we're in a numbered sequence
-      if (isNumberedLine) {
+      // Check if this is a numbered list item
+      const match = line.match(numberPattern);
+      if (match) {
+        // If we already had a follow-up prompt, save it before starting a new one
+        if (currentFollowUp) {
+          followUps.push({ 
+            content: currentFollowUp.trim(),
+            notes: currentFollowUpNotes
+          });
+          currentFollowUpNotes = [];
+        }
+        
+        // Start a new follow-up prompt
+        currentFollowUp = match[1];
         inNumberedSequence = true;
-        return true; // Keep numbered lines
-      }
-      
-      // If we're in a numbered sequence
-      if (inNumberedSequence) {
-        // Check if line is a blank line, a note, or another numbered item - these end the sequence
-        const isBlankLine = line.trim() === '';
-        const isNote = line.trim().startsWith('>');
-        const isAnotherNumbered = numberedLines.has(index);
-        
-        if (isBlankLine || isNote || isAnotherNumbered) {
-          inNumberedSequence = false;
-          return true; // Keep these lines
-        }
-        
-        return false; // Skip all lines in a numbered sequence
-      }
-      
-      // Keep all other lines
-      return true;
-    });
-    
-    // Join the filtered lines back into a string
-    cleanedText = filteredLines.join('\n')
-      .replace(/\n\s*\n\s*\n/g, '\n\n')
-      .trim();
-      
-    navigator.clipboard.writeText(cleanedText)
-      .then(() => {
-        try {
-          // Show a small icon notification in the top right corner
-          const notificationEl = document.createElement('div');
-          notificationEl.className = 'absolute top-2 right-2 bg-green-500 text-white rounded-full p-1 z-10 opacity-0 transition-opacity';
-          notificationEl.style.display = 'flex';
-          notificationEl.style.alignItems = 'center';
-          notificationEl.style.justifyContent = 'center';
-          notificationEl.style.width = '24px';
-          notificationEl.style.height = '24px';
-          
-          // Use React to render the icon
-          const iconContainer = document.createElement('div');
-          // This is a workaround as we can't directly render React components here
-          // Create an SVG that matches the MdCheck icon
-          iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
-          </svg>`;
-          notificationEl.appendChild(iconContainer.firstChild!);
-          
-          // Ensure position is relative before appending
-          if (targetDiv) {
-            // Get the content div (which is the second div child of targetDiv - the inner content container)
-            const contentDiv = targetDiv.querySelector('div');
-            if (contentDiv) {
-              if (getComputedStyle(contentDiv).position === 'static') {
-                contentDiv.style.position = 'relative';
-              }
-              contentDiv.appendChild(notificationEl);
-              
-              // Add fade-in effect
-              setTimeout(() => {
-                notificationEl.style.opacity = '1';
-                notificationEl.style.transition = 'opacity 0.2s ease-in-out';
-              }, 10);
-              
-              // Remove the notification after a delay with fade-out
-              setTimeout(() => {
-                notificationEl.style.opacity = '0';
-                setTimeout(() => {
-                  if (contentDiv && contentDiv.contains(notificationEl)) {
-                    contentDiv.removeChild(notificationEl);
-                  }
-                }, 200); // Wait for fade out animation
-              }, 1500);
+      } else if (inNumberedSequence) {
+        // Handle continuation of numbered sequence
+        if (line.trim() === '') {
+          const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
+          if (!nextLine.match(numberPattern) && !nextLine.trim().startsWith('>')) {
+            // End of this follow-up
+            followUps.push({ 
+              content: currentFollowUp.trim(),
+              notes: currentFollowUpNotes
+            });
+            currentFollowUp = '';
+            currentFollowUpNotes = [];
+            inNumberedSequence = false;
+            // Add empty line to main content if needed
+            if (mainPromptLines.length > 0 && mainPromptLines[mainPromptLines.length - 1].type === 'text') {
+              mainPromptLines[mainPromptLines.length - 1].content += '\n';
+            } else {
+              mainPromptLines.push({ type: 'text', content: '' });
             }
+          } else {
+            // The next line is a numbered item or note, so this empty line belongs to the follow-up
+            currentFollowUp += '\n';
           }
-        } catch (err) {
-          console.error('Error showing notification:', err);
+        } else {
+          // Add the line to the current follow-up
+          currentFollowUp += '\n' + line;
         }
-      })
-      .catch(err => {
-        console.error('Failed to copy text: ', err);
-      });
-  };
-
-  // Render a prompt section based on its type
-  const renderPromptSection = (section: ParsedPromptSection, index: number) => {
-    switch (section.type) {
-      case 'follow-up':
-        return (
-          <div 
-            key={index}
-            className="block group cursor-pointer relative ml-8 mt-3"
-            onClick={(e) => handleCopyPrompt(section.content, e)}
-          >
-            <div className="absolute -left-6 top-5 w-4 h-4 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center z-10">
-            </div>
-            <div 
-              className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border relative border-gray-200"
-              style={{ 
-                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                fontSize: '0.875rem'
-              }}
-            >
-              {processVariableSyntax(section.content)}
-              <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MdContentCopy 
-                  className="h-4 w-4"
-                />
-              </div>
-            </div>
-          </div>
-        );
-      
-      case 'regular':
-      default:
-        return renderRegularSection(section.content, index);
+      } else {
+        // Add regular line to main prompt
+        if (mainPromptLines.length > 0 && mainPromptLines[mainPromptLines.length - 1].type === 'text') {
+          // Append to existing text block
+          mainPromptLines[mainPromptLines.length - 1].content += 
+            (mainPromptLines[mainPromptLines.length - 1].content ? '\n' : '') + line;
+        } else {
+          // Start a new text block
+          mainPromptLines.push({ type: 'text', content: line });
+        }
+      }
     }
+    
+    // Don't forget to add the last follow-up if there is one
+    if (currentFollowUp) {
+      followUps.push({ 
+        content: currentFollowUp.trim(),
+        notes: currentFollowUpNotes
+      });
+    }
+    
+    return { mainPromptLines, followUps };
+  };
+  
+  // Check if a tag is a category
+  function isCategory(tag: string): boolean {
+    // Define the list of categories that should be colored
+    const categories = [
+      "writing", "development", "visual", "ai", "creative", "education", 
+      "marketing", "research", "business", "productivity", "entertainment"
+    ];
+    return categories.includes(tag.toLowerCase());
+  }
+  
+  // Get color for a specific tag (consistent pastel colors)
+  function getColorForTag(tag: string): { bg: string; text: string } {
+    // Normalize tag to lowercase for consistent mapping
+    const normalizedTag = tag.toLowerCase();
+    
+    // Map of tags to color combinations (pastel backgrounds with appropriate text colors)
+    const colorMap: Record<string, { bg: string; text: string }> = {
+      "writing": { bg: "bg-pink-100", text: "text-pink-800" },
+      "blog": { bg: "bg-rose-100", text: "text-rose-800" },
+      "seo": { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
+      
+      "development": { bg: "bg-blue-100", text: "text-blue-800" },
+      "programming": { bg: "bg-indigo-100", text: "text-indigo-800" },
+      "technical": { bg: "bg-sky-100", text: "text-sky-800" },
+      
+      "visual": { bg: "bg-green-100", text: "text-green-800" },
+      "creative": { bg: "bg-emerald-100", text: "text-emerald-800" },
+      "art": { bg: "bg-teal-100", text: "text-teal-800" },
+      
+      "food": { bg: "bg-orange-100", text: "text-orange-800" },
+      "cooking": { bg: "bg-amber-100", text: "text-amber-800" },
+      "recipe": { bg: "bg-yellow-100", text: "text-yellow-800" },
+      
+      "ai": { bg: "bg-purple-100", text: "text-purple-800" },
+      "assistant": { bg: "bg-violet-100", text: "text-violet-800" },
+      "general": { bg: "bg-slate-100", text: "text-slate-800" },
+      
+      "education": { bg: "bg-cyan-100", text: "text-cyan-800" },
+      "marketing": { bg: "bg-red-100", text: "text-red-800" },
+      "research": { bg: "bg-lime-100", text: "text-lime-800" },
+      "business": { bg: "bg-pink-100", text: "text-pink-800" },
+      "productivity": { bg: "bg-blue-100", text: "text-blue-800" },
+      "entertainment": { bg: "bg-violet-100", text: "text-violet-800" },
+      
+      "prompt": { bg: "bg-gray-100", text: "text-gray-800" },
+      "custom": { bg: "bg-stone-100", text: "text-stone-800" }
+    };
+    
+    // For categories, ensure they have a color - if not found, give a distinct color
+    if (isCategory(normalizedTag) && !colorMap[normalizedTag]) {
+      return { bg: "bg-cyan-100", text: "text-cyan-800" };
+    }
+    
+    // Return the color combination for the tag or a default
+    return colorMap[normalizedTag] || { bg: "bg-gray-100", text: "text-gray-800" };
+  }
+
+  // Function to copy text to clipboard
+  const copyToClipboard = (text: string, promptType: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopiedText(promptType);
+        // Reset after 2 seconds
+        setTimeout(() => {
+          setCopiedText(null);
+        }, 2000);
+      },
+      (err) => {
+        console.error('Could not copy text: ', err);
+      }
+    );
   };
 
   if (isLoading) {
@@ -568,8 +271,8 @@ export default function PromptDetailPage() {
       <Header isCreateView={false} />
       
       <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full">
-        {/* Back link and Remix option row */}
-        <div className="flex justify-between items-center mb-6">
+        {/* Back link */}
+        <div className="mb-6">
           <button
             onClick={() => router.push('/')}
             className="flex items-center text-gray-600 hover:text-gray-900"
@@ -577,73 +280,108 @@ export default function PromptDetailPage() {
             <MdOutlineArrowBack className="mr-1" />
             Back to Prompts
           </button>
-          
-          <div 
-            className="flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-            onClick={handleRemix}
-          >
-            <MdShuffle className="mr-1" />
-            Remix Prompt
-          </div>
         </div>
         
-        {/* Dynamic warning that appears only when text after sequences is detected */}
-        {(() => {
-          // Check if there's text after numbered items
-          if (!prompt?.content) return null;
+        {/* Main prompt card - using the exact same styling as homepage */}
+        <div className="mb-8 bg-white p-5 rounded-lg border border-gray-100">
+          {/* Title */}
+          {prompt.title && (
+            <div className="mb-3">
+              <h3 className="text-xl font-medium">
+                {prompt.title}
+              </h3>
+            </div>
+          )}
           
-          const lines = prompt.content.split('\n');
-          for (let i = 1; i < lines.length; i++) {
-            const prevLine = lines[i-1];
-            const currentLine = lines[i];
+          {/* Prompt content - Main prompt and follow-ups with inline notes */}
+          <div className="block">
+            {/* Main prompt with inline notes */}
+            <div>
+              {processPromptContent(prompt.content).mainPromptLines.map((line, index) => (
+                <React.Fragment key={index}>
+                  {line.type === 'note' ? (
+                    <div className="bg-gray-50 border-l-4 border-gray-300 p-3 mb-2 text-gray-700 text-sm">
+                      {line.content}
+                    </div>
+                  ) : line.content ? (
+                    <div 
+                      className="group bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap hover:bg-gray-100 transition-colors border relative cursor-pointer" 
+                      style={{ 
+                        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                        fontSize: '0.875rem'
+                      }}
+                      onClick={() => copyToClipboard(line.content, `main-${index}`)}
+                    >
+                      {line.content}
+                      <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {copiedText === `main-${index}` ? (
+                          <MdCheck className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <MdContentCopy className="h-4 w-4" />
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </React.Fragment>
+              ))}
+            </div>
             
-            if (
-              /^\d+\.\s+.*/.test(prevLine) && // Previous line is numbered
-              currentLine.trim() !== '' && // Current line is not blank
-              !/^\d+\.\s+.*/.test(currentLine) && // Current line is not numbered
-              !currentLine.trim().startsWith('>') // Current line is not a note
-            ) {
-              // Found text right after a numbered item!
-              return (
-                <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-700 text-sm flex gap-2 items-start">
-                  <span className="text-yellow-500 font-bold">⚠️</span>
-                  <div>
-                    <strong>Warning:</strong> Text after numbered items appears with strikethrough and in light gray because it won't be visible in cards or when copying. Add a blank line after numbered items to continue with regular text.
+            {/* Follow-up prompts with their own notes */}
+            {processPromptContent(prompt.content).followUps.map((followUp, index) => (
+              <div key={index} className="ml-6 mb-3">
+                <div className="flex items-start">
+                  <div className="mr-2 mt-4 text-gray-400">{index + 1}.</div>
+                  <div className="flex-1">
+                    {/* Follow-up notes that appear before the prompt */}
+                    {followUp.notes.map((note, noteIndex) => (
+                      <div 
+                        key={`note-${noteIndex}`}
+                        className="bg-gray-50 border-l-4 border-gray-300 p-3 mb-2 text-gray-700 text-sm"
+                      >
+                        {note}
+                      </div>
+                    ))}
+                    
+                    {/* Follow-up prompt content */}
+                    <div 
+                      className="group bg-white p-4 rounded-md font-mono whitespace-pre-wrap hover:bg-gray-100 transition-colors border relative cursor-pointer" 
+                      style={{ 
+                        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                        fontSize: '0.875rem'
+                      }}
+                      onClick={() => copyToClipboard(followUp.content, `followup-${index}`)}
+                    >
+                      {followUp.content}
+                      <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {copiedText === `followup-${index}` ? (
+                          <MdCheck className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <MdContentCopy className="h-4 w-4" />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              );
-            }
-          }
-          return null; // No warning needed
-        })()}
-        
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-2xl font-bold">{prompt.title || 'Untitled Prompt'}</h1>
-            
-            <div className="flex space-x-2">
-              <button
-                onClick={handleCopy}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
-                title="Copy prompt"
-              >
-                {copied ? <MdCheck className="h-5 w-5 text-green-500" /> : <MdContentCopy className="h-5 w-5" />}
-              </button>
-              {/* Edit and delete buttons temporarily removed until admin authentication is implemented */}
-            </div>
+              </div>
+            ))}
           </div>
           
-          {/* Tags and categories */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          {/* Tags and Category section - Exactly matching the homepage */}
+          <div className="flex justify-between mt-6">
+            {/* Category pill on the left */}
+            <div className="flex flex-wrap gap-1">
             {prompt.category && (
-              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center">
+                <span 
+                  className={`text-xs px-2 py-1 rounded-full cursor-pointer transition-colors flex items-center gap-1 ${
+                    getColorForTag(prompt.category).bg} ${getColorForTag(prompt.category).text} hover:opacity-80`}
+                >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
                   fill="none" 
                   viewBox="0 0 24 24" 
                   strokeWidth={1.5} 
                   stroke="currentColor" 
-                  className="w-3 h-3 mr-1"
+                    className="w-3 h-3"
                 >
                   <path 
                     strokeLinecap="round" 
@@ -654,40 +392,23 @@ export default function PromptDetailPage() {
                 {prompt.category}
               </span>
             )}
+            </div>
             
-            {prompt.tags.filter(tag => tag !== prompt.category).map((tag, index) => (
+            {/* Tags on the right */}
+            <div className="flex flex-wrap gap-1 justify-start">
+              {prompt.tags
+                .filter(tag => tag !== prompt.category) // Skip the tag if it's the same as the category
+                .map((tag, index) => (
               <span 
                 key={index} 
-                className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center"
+                    className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 cursor-pointer hover:opacity-80 flex items-center"
               >
                 <span className="mr-1 font-medium">#</span>
                 {tag}
               </span>
-            ))}
-          </div>
-          
-          {/* Prompt content */}
-          <div className="relative h-full">
-            {/* Vertical line */}
-            <div className="absolute top-12 left-4 w-0.5 bg-gray-200 h-[calc(100%-3rem)] -ml-2"></div>
-            
-            {/* Content with proper styling */}
-            <div 
-              className="font-mono whitespace-pre-wrap p-4 mb-4 relative" 
-              style={{ 
-                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                fontSize: '0.875rem',
-                lineHeight: '1.6'
-              }}
-            >
-              {parsedContent.map((section, index) => renderPromptSection(section, index))}
+                ))
+              }
             </div>
-          </div>
-          
-          {/* Metadata */}
-          <div className="text-sm text-gray-500 border-t pt-4 mt-4">
-            <div>Created: {new Date(prompt.createdAt).toLocaleString()}</div>
-            <div>Last updated: {new Date(prompt.updatedAt).toLocaleString()}</div>
           </div>
         </div>
       </div>
