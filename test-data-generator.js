@@ -16,8 +16,11 @@ const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
 
 // Define the ranges
-const PROMPTS_RANGE = 'Prompts!A:H';  // Added column H for test_data flag
+const PROMPTS_RANGE = 'Prompts!A:G';  // Using 7-column structure to match application
 const TAGS_RANGE = 'Tags!A:C';
+
+// Test data marker - used in prompt titles
+const TEST_DATA_PREFIX = '[TEST-DATA]';
 
 // Categories and tags to use in generated data
 const CATEGORIES = [
@@ -96,13 +99,12 @@ The code should:
   
   return {
     id: uuidv4(),
-    title: `${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()}`,
+    title: `${TEST_DATA_PREFIX} ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()}`,
     content: contentGenerator(),
     tags: [...new Set(usedTags)],
     category,
     createdAt: new Date(faker.date.past()).toISOString(),
-    updatedAt: new Date().toISOString(),
-    test_data: true  // Flag to identify this as test data
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -110,7 +112,7 @@ The code should:
 function generateLongPrompt(paragraphCount = 30, complexityLevel = 'medium') {
   // Base content is paragraphs of lorem ipsum
   let paragraphs = faker.lorem.paragraphs(paragraphCount, '\n\n');
-  let title = `Long Prompt (${paragraphCount} paragraphs, ${complexityLevel} complexity)`;
+  let title = `${TEST_DATA_PREFIX} Long Prompt (${paragraphCount} paragraphs, ${complexityLevel} complexity)`;
   let tags = ["long", "performance-test", `paragraphs-${paragraphCount}`, `complexity-${complexityLevel}`];
   
   // Add syntax complexity based on the specified level
@@ -238,8 +240,7 @@ function generateLongPrompt(paragraphCount = 30, complexityLevel = 'medium') {
     tags,
     category: "Testing",
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    test_data: true
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -249,46 +250,42 @@ function generateEdgeCasePrompts() {
     // Very long prompt
     {
       id: uuidv4(),
-      title: "Extremely Long Prompt",
+      title: `${TEST_DATA_PREFIX} Extremely Long Prompt`,
       content: faker.lorem.paragraphs(30),
       tags: ["long", "performance-test"],
       category: "Testing",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      test_data: true
+      updatedAt: new Date().toISOString()
     },
     // Prompt with many tags
     {
       id: uuidv4(),
-      title: "Many Tags Prompt",
+      title: `${TEST_DATA_PREFIX} Many Tags Prompt`,
       content: "Test prompt with many tags",
       tags: TAGS,
       category: "Testing",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      test_data: true
+      updatedAt: new Date().toISOString()
     },
     // Prompt with special characters
     {
       id: uuidv4(),
-      title: "Special Characters Test",
+      title: `${TEST_DATA_PREFIX} Special Characters Test`,
       content: "Test with special characters: !@#$%^&*()_+<>?\\/|{}[]~`€£¥©®™℠",
       tags: ["special-chars", "test"],
       category: "Testing",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      test_data: true
+      updatedAt: new Date().toISOString()
     },
     // Empty content or minimal content
     {
       id: uuidv4(),
-      title: "Minimal Content",
+      title: `${TEST_DATA_PREFIX} Minimal Content`,
       content: "Test.",
       tags: ["minimal"],
       category: "Testing",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      test_data: true
+      updatedAt: new Date().toISOString()
     }
   ];
 }
@@ -320,13 +317,18 @@ function generateLongPromptsTest() {
 
 // Initialize the Google Sheets API client
 async function getGoogleSheetsClient() {
-  const auth = new JWT({
-    email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: GOOGLE_PRIVATE_KEY,
-    scopes: SCOPES,
-  });
-
-  return google.sheets({ version: 'v4', auth });
+  try {
+    const auth = new JWT({
+      email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: GOOGLE_PRIVATE_KEY,
+      scopes: SCOPES,
+    });
+    
+    return google.sheets({ version: 'v4', auth });
+  } catch (error) {
+    console.error('Error creating Google Sheets client:', error);
+    throw error;
+  }
 }
 
 // Generate and add test prompts
@@ -353,8 +355,7 @@ async function addTestPrompts(count = 100) {
           prompt.tags.join(', '),
           prompt.category,
           prompt.createdAt,
-          prompt.updatedAt,
-          'TRUE'  // test_data flag
+          prompt.updatedAt
         ];
       });
       
@@ -397,8 +398,7 @@ async function addEdgeCasePrompts() {
       prompt.tags.join(', '),
       prompt.category,
       prompt.createdAt,
-      prompt.updatedAt,
-      'TRUE'  // test_data flag
+      prompt.updatedAt
     ]);
     
     await sheets.spreadsheets.values.append({
@@ -437,8 +437,7 @@ async function addLongPrompts() {
       prompt.tags.join(', '),
       prompt.category,
       prompt.createdAt,
-      prompt.updatedAt,
-      'TRUE'  // test_data flag
+      prompt.updatedAt
     ]);
     
     await sheets.spreadsheets.values.append({
@@ -536,7 +535,7 @@ async function cleanupAllTestData() {
     // Clear all data except headers in Prompts sheet
     await sheets.spreadsheets.values.clear({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: 'Prompts!A2:H',
+      range: 'Prompts!A2:G',
     });
     
     // Clear all data except headers in Tags sheet
@@ -555,7 +554,7 @@ async function cleanupAllTestData() {
 // Clean up test data only (preserving real user data)
 async function cleanupTestDataOnly() {
   try {
-    console.log("Cleaning up flagged test data only...");
+    console.log("Cleaning up test data...");
     
     // First, get all data from the Prompts sheet
     const sheets = await getGoogleSheetsClient();
@@ -563,7 +562,7 @@ async function cleanupTestDataOnly() {
     // Get all prompts
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: 'Prompts!A2:H',
+      range: 'Prompts!A2:G',
     });
     
     const rows = response.data.values || [];
@@ -573,12 +572,13 @@ async function cleanupTestDataOnly() {
       return;
     }
     
-    // Filter out test data and keep indices of real data
+    // Filter test data by looking for test data prefix in the title
     const realDataRows = [];
     const testDataRows = [];
     
     rows.forEach((row, index) => {
-      if (row.length > 7 && row[7] === 'TRUE') {
+      const title = row[1] || '';
+      if (title.startsWith(TEST_DATA_PREFIX)) {
         testDataRows.push(index + 2); // +2 because of 1-indexing and header row
       } else {
         realDataRows.push(row);
@@ -595,14 +595,14 @@ async function cleanupTestDataOnly() {
     // Clear all data
     await sheets.spreadsheets.values.clear({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: 'Prompts!A2:H',
+      range: 'Prompts!A2:G',
     });
     
     // Re-add only real data rows if there are any
     if (realDataRows.length > 0) {
       await sheets.spreadsheets.values.append({
         spreadsheetId: GOOGLE_SHEET_ID,
-        range: 'Prompts!A2:H',
+        range: 'Prompts!A2:G',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
@@ -612,13 +612,7 @@ async function cleanupTestDataOnly() {
     }
     
     // Recalculate tags based on remaining data
-    const remainingPromptsResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEET_ID,
-      range: 'Prompts!A2:H',
-    });
-    
-    const remainingRows = remainingPromptsResponse.data.values || [];
-    const remainingPrompts = remainingRows.map(row => {
+    const remainingPrompts = realDataRows.map(row => {
       const tagsString = row[3] || '';
       return {
         category: row[4] || '',
@@ -688,73 +682,6 @@ async function cleanupTestDataOnly() {
   }
 }
 
-// Initialize prompts sheet with test_data column if needed
-async function ensureTestDataColumn() {
-  try {
-    const sheets = await getGoogleSheetsClient();
-    
-    // Get spreadsheet info to check if the necessary sheets exist
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: GOOGLE_SHEET_ID,
-    });
-    
-    // Get the header row to see if we need to add the test_data column
-    const headerResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEET_ID,
-      range: 'Prompts!A1:H1',
-    });
-    
-    const headerRow = headerResponse.data.values && headerResponse.data.values[0];
-    
-    if (!headerRow || headerRow.length < 8 || headerRow[7] !== 'test_data') {
-      console.log("Adding test_data column to Prompts sheet");
-      
-      // Append the test_data header
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: GOOGLE_SHEET_ID,
-        range: 'Prompts!H1',
-        valueInputOption: 'RAW',
-        requestBody: {
-          values: [['test_data']]
-        },
-      });
-      
-      // Mark existing data as not test data
-      const dataResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: GOOGLE_SHEET_ID,
-        range: 'Prompts!A2:G',
-      });
-      
-      const existingRows = dataResponse.data.values || [];
-      
-      if (existingRows.length > 0) {
-        // For each existing row, add FALSE for test_data
-        for (let i = 0; i < existingRows.length; i++) {
-          const rowIndex = i + 2; // +2 because of 1-indexing and header row
-          
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: GOOGLE_SHEET_ID,
-            range: `Prompts!H${rowIndex}`,
-            valueInputOption: 'RAW',
-            requestBody: {
-              values: [['FALSE']]
-            },
-          });
-        }
-      }
-      
-      console.log("Added test_data column and marked existing data as non-test data");
-    } else {
-      console.log("test_data column already exists");
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error ensuring test_data column:", error);
-    return false;
-  }
-}
-
 // Run the script
 async function main() {
   try {
@@ -778,9 +705,6 @@ async function main() {
       return;
     }
     
-    // Ensure test_data column exists
-    await ensureTestDataColumn();
-    
     // Parse command line arguments
     const args = process.argv.slice(2);
     
@@ -790,10 +714,31 @@ async function main() {
       return;
     }
     
-    // Parse count parameter
-    const countArg = args.find(arg => arg.startsWith('--count=')) || args[args.indexOf('--count') + 1];
-    const count = countArg && !countArg.startsWith('--') ? 
-      parseInt(countArg.includes('=') ? countArg.split('=')[1] : countArg, 10) : 100;
+    // FIXED: Improved count parameter handling
+    let count = 100; // default count
+    
+    // Check for count=N format
+    const countEqualsArg = args.find(arg => arg.startsWith('--count='));
+    if (countEqualsArg) {
+      count = parseInt(countEqualsArg.split('=')[1], 10);
+    } else {
+      // Check for --count N format
+      const countIndex = args.indexOf('--count');
+      if (countIndex !== -1 && countIndex < args.length - 1) {
+        const countValue = args[countIndex + 1];
+        if (!countValue.startsWith('--')) {
+          count = parseInt(countValue, 10);
+        }
+      }
+    }
+    
+    // Validate count is a positive number
+    if (isNaN(count) || count <= 0) {
+      count = 100;
+      console.log('Invalid count specified, using default of 100');
+    } else {
+      console.log(`Using count = ${count}`);
+    }
     
     // Check for complexity level
     const complexityArg = args.find(arg => arg.startsWith('--complexity=')) || 
@@ -829,8 +774,7 @@ async function main() {
         prompt.tags.join(', '),
         prompt.category,
         prompt.createdAt,
-        prompt.updatedAt,
-        'TRUE'  // test_data flag
+        prompt.updatedAt
       ]);
       
       await sheets.spreadsheets.values.append({
