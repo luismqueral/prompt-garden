@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     console.log("API: API key is configured (length:", apiKey.length, ")");
     
     // Prepare prompt for title generation
-    const systemPrompt = "You are a helpful assistant that generates concise, descriptive titles for AI prompts. The title should be 2-6 words, capturing the essence of the prompt.";
+    const systemPrompt = "You are a helpful assistant that generates simple, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical.";
     
     // Clean up the content for the prompt
     const cleanContent = content

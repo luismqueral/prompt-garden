@@ -302,19 +302,16 @@ To create follow-up prompts that will display with circle indicators:
       
       console.log("addNewPrompt: Raw title from content:", title);
       
-      // For testing: Always try to generate a title regardless of whether we found one
-      // Comment this out after testing
-      try {
-        console.log("addNewPrompt: Force attempting title generation for testing...");
-        setSuccessMessage("Generating title...");
-        setShowSuccess(true);
-        const generatedTitle = await TitleGeneratorService.generateTitle(content);
-        console.log("addNewPrompt: Generated title result:", generatedTitle);
-        title = generatedTitle || title || 'Untitled Prompt';
-      } catch (error) {
-        console.error("addNewPrompt: Error generating title:", error);
-        // If generation fails, fall back to existing title or default
-        title = title || 'Untitled Prompt';
+      // If no title found, generate one using OpenRouter
+      if (!title) {
+        try {
+          setSuccessMessage("Creating a descriptive title for your prompt...");
+          setShowSuccess(true);
+          title = await TitleGeneratorService.generateTitle(content);
+        } catch (error) {
+          console.error("addNewPrompt: Error generating title:", error);
+          title = "Untitled Prompt";
+        }
       }
       
       console.log("addNewPrompt: Final title:", title);
@@ -1143,7 +1140,7 @@ To create follow-up prompts that will display with circle indicators:
                           const content = blocksToContent(blocks);
                           console.log("TEST: Triggering title generation with content:", content.substring(0, 100) + "...");
                           try {
-                            setSuccessMessage("Testing title generation...");
+                            setSuccessMessage("Creating a natural-sounding title...");
                             setShowSuccess(true);
                             const title = await TitleGeneratorService.generateTitle(content);
                             console.log("TEST: Title generation result:", title);
@@ -1157,7 +1154,7 @@ To create follow-up prompts that will display with circle indicators:
                         }}
                         className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                       >
-                        Test Title Generator
+                        Generate Descriptive Title
                       </button>
                     </div>
                     
