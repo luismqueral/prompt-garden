@@ -11,9 +11,15 @@
  * npx ts-node scripts/test-tag-format.ts
  */
 
-import { contentToBlocks, blocksToContent } from '../lib/utils/blockUtils';
-import { migrateToTagFormat, migrateToLegacyFormat } from '../lib/utils/migration';
-import { Block } from '@/components/ui/block-editor';
+const { contentToBlocks, blocksToContent } = require('../lib/utils/blockUtils');
+const { migrateToTagFormat, migrateToLegacyFormat } = require('../lib/utils/migration');
+
+// Block type definition for TypeScript
+interface Block {
+  id: string;
+  type: 'prompt' | 'note';
+  content: string;
+}
 
 // Helper function to print results
 function printResult(description: string, success: boolean, details?: string) {
@@ -133,7 +139,7 @@ function runTests() {
     const newBlocks = contentToBlocks(content);
     
     const success = blocks.length === newBlocks.length && 
-                    blocks.every((block, i) => 
+                    blocks.every((block: any, i: number) => 
                       block.type === newBlocks[i].type && 
                       block.content === newBlocks[i].content
                     );
