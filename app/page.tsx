@@ -1136,6 +1136,31 @@ To create follow-up prompts that will display with circle indicators:
                     {/* Block editor (no border around it) */}
                     <BlockEditor blocks={blocks} onChange={setBlocks} />
                     
+                    {/* Test title generation button - for debugging only */}
+                    <div className="mt-2 mb-4 flex justify-end">
+                      <button
+                        onClick={async () => {
+                          const content = blocksToContent(blocks);
+                          console.log("TEST: Triggering title generation with content:", content.substring(0, 100) + "...");
+                          try {
+                            setSuccessMessage("Testing title generation...");
+                            setShowSuccess(true);
+                            const title = await TitleGeneratorService.generateTitle(content);
+                            console.log("TEST: Title generation result:", title);
+                            setSuccessMessage(`Generated title: "${title}"`);
+                            setTimeout(() => setShowSuccess(false), 5000);
+                          } catch (error) {
+                            console.error("TEST: Title generation error:", error);
+                            setSuccessMessage("Title generation failed. See console.");
+                            setTimeout(() => setShowSuccess(false), 3000);
+                          }
+                        }}
+                        className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                      >
+                        Test Title Generator
+                      </button>
+                    </div>
+                    
                     {/* Tags & Categories Input Section */}
                     <div className="mt-9 mb-6">
                       <p className="text-sm font-medium mb-2">Tags & Categories</p>
