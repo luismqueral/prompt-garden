@@ -27,6 +27,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { PromptService } from "@/lib/api/promptService";
 import { Prompt as GoogleSheetsPrompt } from "@/lib/googleSheets";
+import { TitleGeneratorService } from "@/lib/api/titleGeneratorService";
 
 // Add Material Design icons
 import { MdSearch, MdClose, MdContentCopy, MdCheck } from "react-icons/md";
@@ -297,6 +298,18 @@ To create follow-up prompts that will display with circle indicators:
         title = firstLine.substring(2).trim();
       }
       
+      // If no title found, generate one using OpenRouter
+      if (!title) {
+        try {
+          setSuccessMessage("Generating title...");
+          setShowSuccess(true);
+          title = await TitleGeneratorService.generateTitle(content);
+        } catch (error) {
+          console.error("Error generating title:", error);
+          title = "Untitled Prompt";
+        }
+      }
+      
       // Create the prompt data object
       const promptData = {
         title: title || 'Untitled Prompt',
@@ -304,6 +317,9 @@ To create follow-up prompts that will display with circle indicators:
         tags: selectedTags,
         category: selectedCategory || undefined
       };
+      
+      // Update success message
+      setSuccessMessage("Saving prompt...");
       
       // Save to Google Sheets using the API
       const createdPrompt = await PromptService.addPrompt(promptData);
