@@ -26,10 +26,15 @@ export const TitleGeneratorService = {
    */
   async generateTitle(content: string): Promise<string> {
     try {
+      console.log("TitleGeneratorService: Starting title generation process");
+      
       // Make sure we have content to work with
       if (!content.trim()) {
+        console.log("TitleGeneratorService: Empty content, returning default title");
         return 'Untitled Prompt';
       }
+      
+      console.log("TitleGeneratorService: Calling API endpoint with content length:", content.length);
       
       // Call the API endpoint
       const response = await fetch('/api/generate-title', {
@@ -40,18 +45,23 @@ export const TitleGeneratorService = {
         body: JSON.stringify({ content }),
       });
       
+      console.log("TitleGeneratorService: API response status:", response.status);
+      
       // Parse the response
       const data = await response.json() as GenerateTitleResponse;
       
+      console.log("TitleGeneratorService: API response data:", data);
+      
       // Return the generated title or fallback
       if (data.success && data.title) {
+        console.log("TitleGeneratorService: Successfully generated title:", data.title);
         return data.title;
       } else {
-        console.error('Title generation failed:', data.message);
+        console.error('TitleGeneratorService: Title generation failed:', data.message);
         return 'Untitled Prompt';
       }
     } catch (error) {
-      console.error('Error generating title:', error);
+      console.error('TitleGeneratorService: Error generating title:', error);
       return 'Untitled Prompt';
     }
   }

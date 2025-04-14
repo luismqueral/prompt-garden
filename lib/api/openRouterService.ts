@@ -24,7 +24,7 @@ interface OpenRouterResponse {
 export async function generateTitle(content: string): Promise<string> {
   try {
     // Check for API key
-    const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       console.error('OpenRouter API key is not defined');
       return 'Untitled Prompt';
