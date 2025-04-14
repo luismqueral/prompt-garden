@@ -29,27 +29,15 @@ import { PromptService } from "@/lib/api/promptService";
 import { Prompt as GoogleSheetsPrompt } from "@/lib/googleSheets";
 
 // Add Material Design icons
-import { MdSearch, MdClose, MdAutoFixHigh, MdContentCopy, MdCheck, MdArrowBack } from "react-icons/md";
-
-// Add CodeMirror components and extensions
-import CodeMirror from '@uiw/react-codemirror';
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
-import { EditorView, Decoration } from '@codemirror/view';
-import { Extension } from '@codemirror/state';
-import { Compartment } from '@codemirror/state';
-import { lineNumbers } from '@codemirror/view';
-import { gutters } from '@codemirror/view';
-import { StreamLanguage } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
-import { createTheme } from '@uiw/codemirror-themes';
+import { MdSearch, MdClose, MdContentCopy, MdCheck } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
+import { BlockEditor, Block } from '@/components/ui/block-editor';
+import { blocksToContent, contentToBlocks } from '@/lib/utils/blockUtils';
 
 /**
  * Prompt Type Definition
@@ -75,382 +63,6 @@ type Prompt = {
 
 // Initial example prompts array (empty to start)
 const initialPrompts: Prompt[] = [];
-
-/**
- * Highlight Prompt Syntax Function
- * 
- * This is a sophisticated function that processes the raw text of a prompt and converts it into
- * React components with appropriate styling based on syntax patterns. It handles:
- * 
- * 1. Variables: Text within [brackets] is styled as variables
- * 2. Notes: Lines starting with > are styled as context notes
- * 3. Numbered Items: Lines starting with numbers (1., 2., etc.) are styled as follow-up prompts
- * 4. Continued Text: Text after numbered items is styled as a continued part of the numbered item
- * 
- * The function uses a multi-pass approach:
- * - First identifies all numbered lines and sequence terminators
- * - Then processes the text line by line, applying appropriate styling
- * - Special styling is applied to text within a numbered sequence
- * 
- * @param text - The raw prompt text to process
- * @returns An array of React nodes with appropriate styling
- */
-const highlightPromptSyntax = (text: string): React.ReactNode[] => {
-  if (!text) return [text];
-  
-  // First split by line to handle line-based highlighting (notes and numbered items)
-  const lines = text.split('\n');
-  
-  // First identify all numbered lines
-  const numberedLines = new Set<number>();
-  const sequenceEndLines = new Set<number>();
-  
-  lines.forEach((line, index) => {
-    if (/^\d+\.\s+.*/.test(line)) {
-      numberedLines.add(index);
-    }
-    
-    // Consider these patterns as sequence terminators
-    if (
-      /^\d+\.\s+.*/.test(line) || // Another numbered item
-      /^>/.test(line.trim()) || // A note line
-      /^```/.test(line.trim()) || // Code block
-      /^#/.test(line.trim()) // Heading
-    ) {
-      sequenceEndLines.add(index);
-    }
-  });
-  
-  // Track if we're within a numbered sequence
-  let inNumberedSequence = false;
-  let currentSequenceStartLine = 0;
-  
-  return lines.map((line, lineIndex) => {
-    // Check if this is a note line (starts with >)
-    if (line.trim().startsWith('>')) {
-      inNumberedSequence = false;
-      return (
-        <div key={`line-${lineIndex}`} className="block border-l-4 border-gray-300 bg-gray-50 text-gray-600 pl-2">
-          {highlightVariableSyntax(line)}
-        </div>
-      );
-    }
-    
-    // Check if this is a numbered follow-up prompt line
-    const isNumberedLine = numberedLines.has(lineIndex);
-    if (isNumberedLine) {
-      inNumberedSequence = true;
-      currentSequenceStartLine = lineIndex;
-      const numberedLineMatch = line.match(/^(\d+)\.\s+(.*)/);
-      if (numberedLineMatch) {
-        return (
-          <div key={`line-${lineIndex}`} className="flex items-start group">
-            <span className="mr-2 font-bold text-gray-600 group-hover:text-gray-800">{numberedLineMatch[1]}.</span>
-            <div className="flex-grow">
-              {highlightVariableSyntax(numberedLineMatch[2])}
-            </div>
-          </div>
-        );
-      }
-    }
-    
-    // Check if this is a blank line - blank lines don't end sequences anymore
-    const isBlankLine = line.trim() === '';
-    if (isBlankLine && inNumberedSequence) {
-      return (
-        <div key={`line-${lineIndex}`}>
-          &nbsp;
-        </div>
-      );
-    }
-    
-    // Check if this is a sequence terminator
-    if (sequenceEndLines.has(lineIndex) && lineIndex !== currentSequenceStartLine) {
-      inNumberedSequence = false;
-    }
-    
-    // Check if this is a line after a numbered sequence
-    if (inNumberedSequence) {
-      // Display text after a numbered sequence with strikethrough
-      return (
-        <div key={`line-${lineIndex}`} className="pl-6 bg-yellow-50 border-l-4 border-yellow-200">
-          <div className="flex items-start">
-            <div className="text-yellow-700 line-through opacity-60">
-              {highlightVariableSyntax(line)}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    // For regular lines, process variable syntax
-    return (
-      <div key={`line-${lineIndex}`}>
-        {highlightVariableSyntax(line)}
-      </div>
-    );
-  });
-};
-
-/**
- * Highlight Variable Syntax Function
- * 
- * This helper function specifically handles the highlighting of variables in the text.
- * Variables are denoted by [square brackets] and are styled differently from regular text.
- * 
- * The function:
- * 1. Splits the text by the variable pattern using regex
- * 2. Processes each part, highlighting variables and leaving other text as-is
- * 3. Returns an array of React nodes with appropriate styling
- * 
- * @param text - The text to process for variable syntax
- * @returns An array of React nodes with variables highlighted
- */
-const highlightVariableSyntax = (text: string): React.ReactNode[] => {
-  // Split text by [variable] pattern
-  const parts = text.split(/(\[[^\]]+\])/g);
-  
-  if (parts.length === 1) {
-    // No variables found
-    return [text];
-  }
-  
-  // Transform each part
-  return parts.map((part, index) => {
-    if (part.match(/^\[[^\]]+\]$/)) {
-      // It's a variable in brackets - convert to uppercase and style
-      const variableText = part.slice(1, -1).toUpperCase();
-      return (
-        <span key={index} className="text-emerald-700 font-medium uppercase">
-          {variableText}
-        </span>
-      );
-    }
-    return part;
-  });
-};
-
-// Custom markdown parser configuration with variable handling
-const customMarkdownExtension = markdown({
-  base: markdownLanguage,
-  codeLanguages: [],
-  addKeymap: true,
-});
-
-/**
- * Variable Syntax Highlighter for CodeMirror
- * 
- * This function creates a CodeMirror extension that provides custom syntax highlighting
- * for variables ([VARIABLE]) and text after numbered sequences within the editor.
- * 
- * It works by:
- * 1. Creating decorations for variable patterns
- * 2. Processing the document line by line to identify numbered sequences
- * 3. Applying special styling to text within those sequences
- * 
- * This creates a consistent editing experience that matches the display format.
- * 
- * @param hasTextAfterSequence - Boolean state indicating if there's text after a sequence
- * @param setHasTextAfterSequence - Function to update the state
- * @returns A CodeMirror extension for syntax highlighting
- */
-const variableSyntaxHighlighter = (
-  hasTextAfterSequence: boolean,
-  setHasTextAfterSequence: (value: boolean) => void
-): Extension => {
-  // Create a decorator that looks for patterns
-  return EditorView.decorations.of(view => {
-    const decorations = [];
-    const content = view.state.doc.toString();
-    
-    // Match all [VARIABLE] patterns
-    const variableRegex = /\[([^\]]+)\]/g;
-    let match;
-    
-    while ((match = variableRegex.exec(content)) !== null) {
-      const from = match.index;
-      const to = from + match[0].length;
-      
-      // Create a decoration for the [VARIABLE] pattern
-      decorations.push({
-        from,
-        to,
-        value: Decoration.mark({
-          attributes: {
-            class: "cm-variable-syntax",
-            style: "color: #047857; font-weight: 500; text-transform: uppercase;"
-          }
-        })
-      });
-    }
-    
-    // Process document line by line to find text after numbered sequences using line decorations
-    console.log("Processing document for text after sequences");
-    
-    // First pass: identify the line numbers of all numbered sequences and sequence ending markers
-    const numberedLines = new Set<number>();
-    const sequenceEndLines = new Set<number>();
-    
-    for (let i = 1; i <= view.state.doc.lines; i++) {
-      const line = view.state.doc.line(i);
-      const lineText = line.text;
-      
-      if (/^\d+\.\s+.*/.test(lineText)) {
-        numberedLines.add(i);
-      }
-      
-      // We consider these patterns to be sequence terminators
-      if (
-        /^\d+\.\s+.*/.test(lineText) || // Another numbered item
-        /^>/.test(lineText.trim()) || // A note
-        /^```/.test(lineText.trim()) || // Code block
-        /^#/.test(lineText.trim()) // Heading
-      ) {
-        sequenceEndLines.add(i);
-      }
-    }
-    
-    // Second pass: mark all regions after a numbered sequence up to a terminator
-    let inNumberedSequence = false;
-    let currentSequenceStartLine = 0;
-    let foundTextAfterSequence = false;
-    
-    for (let i = 1; i <= view.state.doc.lines; i++) {
-      const line = view.state.doc.line(i);
-      const lineText = line.text;
-      
-      // Check if this is a numbered line
-      if (numberedLines.has(i)) {
-        inNumberedSequence = true;
-        currentSequenceStartLine = i;
-      } 
-      // Check if this is a blank line - blank lines DO NOT end sequences anymore
-      else if (lineText.trim() === '') {
-        // Continue the sequence across blank lines
-      }
-      // Check if this is a sequence terminator
-      else if (sequenceEndLines.has(i) && i !== currentSequenceStartLine) {
-        inNumberedSequence = false;
-      }
-      // If we're in a numbered sequence and this is not a special line
-      else if (inNumberedSequence) {
-        // Apply line decoration to ALL text after a numbered sequence
-        console.log(`Line ${i} is text after a sequence: "${lineText}"`);
-        foundTextAfterSequence = true;
-        decorations.push(Decoration.line({
-          attributes: {
-            class: "cm-line-after-sequence",
-            style: "text-decoration: line-through !important; opacity: 0.6 !important; color: #9CA3AF !important; background-color: transparent !important;"
-          }
-        }).range(line.from));
-      }
-    }
-    
-    // Update state based on whether we found text after a sequence
-    if (foundTextAfterSequence !== hasTextAfterSequence) {
-      setTimeout(() => setHasTextAfterSequence(foundTextAfterSequence), 0);
-    }
-    
-    return Decoration.set(decorations, true);
-  });
-};
-
-// Create a compartment for line number configuration
-const lineNumberCompartment = new Compartment();
-
-// Custom CodeMirror extensions for our syntax highlighting
-const createPromptSyntaxHighlighter = () => {
-  // Custom theme for our syntax highlighting
-  const promptSyntaxTheme = HighlightStyle.define([
-    // Headings
-    {
-      tag: tags.heading,
-      color: "#1F2937", // text-gray-800
-      fontWeight: "600"
-    },
-    // Notes (lines starting with >)
-    {
-      tag: tags.quote,
-      color: "#6B7280", // text-gray-500
-      backgroundColor: "#F9FAFB", // bg-gray-50
-      display: "block",
-      borderLeft: "4px solid #E5E7EB", // border-gray-200
-      paddingLeft: "8px"
-    },
-    // Numbered lists
-    {
-      tag: tags.list,
-      fontWeight: "normal", 
-      color: "#4B5563" // text-gray-700
-    },
-    // List bullet/marker
-    {
-      tag: tags.atom,
-      fontWeight: "bold",
-      color: "#4B5563" // text-gray-700
-    },
-    // General code and markup styling
-    {
-      tag: tags.keyword,
-      color: "#2563EB" // text-blue-600
-    },
-    {
-      tag: tags.comment,
-      color: "#6B7280", // text-gray-500
-      fontStyle: "italic"
-    },
-  ]);
-
-  // Custom CSS theme for editor styles
-  const customStyles = EditorView.theme({
-    // Enhanced styling for numbered lists and notes
-    ".cm-line": {
-      padding: "2px 0",
-    },
-    ".cm-content": {
-      padding: "12px 16px",
-    },
-    // Bold styling for numbers in lists
-    ".cm-list": {
-      fontWeight: "bold",
-      marginLeft: "8px",
-    },
-    ".cm-list-marker": {
-      fontWeight: "bold",
-    },
-    // Custom styling for variables in brackets
-    ".cm-variable-syntax": {
-      color: "#047857 !important", // text-emerald-700
-      fontWeight: "500 !important",
-      textTransform: "uppercase !important"
-    },
-    // Custom styling for text after sequences (using line decoration now)
-    ".cm-line-after-sequence": {
-      textDecoration: "line-through !important",
-      opacity: "0.6 !important",
-      color: "#9CA3AF !important", // text-gray-400
-      backgroundColor: "transparent !important"
-    },
-    ".cm-heading": {
-      color: "#1F2937 !important", // text-gray-800
-      fontWeight: "600 !important"
-    }
-  });
-
-  // Theme extension
-  const themeExtension = syntaxHighlighting(promptSyntaxTheme);
-
-  return [
-    themeExtension,
-    customStyles,
-    variableSyntaxHighlighter(false, () => {}),
-    EditorView.lineWrapping,
-    // This properly disables all gutters
-    EditorView.theme({
-      ".cm-gutters": { display: "none" }
-    })
-  ];
-};
 
 export default function HomePage() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -478,6 +90,9 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [blocks, setBlocks] = useState<Block[]>([
+    { id: `block-${Date.now()}`, type: 'prompt', content: '' }
+  ]);
 
   // Define the tutorial placeholder text
   const placeholderText = `# How to Create a Prompt
@@ -651,16 +266,33 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [activeView]);
 
-  // Add a new prompt
+  // Update this useEffect to initialize blocks when entering create view
+  useEffect(() => {
+    if (activeView === "create" && blocks.length === 1 && blocks[0].content === '') {
+      // Set a sample prompt in the first block
+      setBlocks([
+        { 
+          id: `block-${Date.now()}`, 
+          type: 'prompt', 
+          content: placeholderText
+        }
+      ]);
+    }
+  }, [activeView]);
+
+  // Modify the addNewPrompt function
   const addNewPrompt = async () => {
     if (isSubmitting) return; // Prevent multiple submissions
     
     setIsSubmitting(true);
     
     try {
-      // Find title from first heading, if present
+      // Convert blocks to content string
+      const content = blocksToContent(blocks);
+      
+      // Find title from first heading, if present (keep existing logic)
       let title = "";
-      const firstLine = newPromptContent.split('\n')[0];
+      const firstLine = content.split('\n')[0];
       if (firstLine && firstLine.startsWith('# ')) {
         title = firstLine.substring(2).trim();
       }
@@ -668,7 +300,7 @@ To create follow-up prompts that will display with circle indicators:
       // Create the prompt data object
       const promptData = {
         title: title || 'Untitled Prompt',
-        content: newPromptContent || placeholderText,
+        content,
         tags: selectedTags,
         category: selectedCategory || undefined
       };
@@ -688,8 +320,7 @@ To create follow-up prompts that will display with circle indicators:
       }]);
       
       // Reset form
-      setNewPromptTitle("");
-      setNewPromptContent("");
+      setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: '' }]);
       setSelectedTags([]);
       setSelectedCategory(null);
       setIsRemixMode(false);
@@ -1068,6 +699,25 @@ To create follow-up prompts that will display with circle indicators:
   const stripSpecialTags = (content: string): string => {
     if (!content) return '';
     
+    // Check if content uses the new tag format with pg-prompt and pg-note tags
+    if (content.includes('<pg-prompt>') || content.includes('<pg-note>')) {
+      // Extract just the first prompt block
+      const promptRegex = /<pg-prompt>([\s\S]*?)<\/pg-prompt>/;
+      const match = content.match(promptRegex);
+      
+      if (match && match[1]) {
+        // Return the content of the first prompt block, trimmed
+        return match[1].trim();
+      }
+      
+      // If no prompt blocks were found, remove all tags and return the content
+      return content
+        .replace(/<pg-prompt>[\s\S]*?<\/pg-prompt>/g, '')
+        .replace(/<pg-note>[\s\S]*?<\/pg-note>/g, '')
+        .trim();
+    }
+    
+    // For legacy format content
     // Split content by lines to analyze structure
     const lines = content.split('\n');
     let result = '';
@@ -1315,8 +965,8 @@ To create follow-up prompts that will display with circle indicators:
   }
 
   // CodeMirror onChange handler
-  const handleEditorChange = (value: string) => {
-    setNewPromptContent(value);
+  const handleEditorChange = (blocks: Block[]) => {
+    setBlocks(blocks);
   };
   
   // Handle keyboard shortcuts
@@ -1458,113 +1108,8 @@ To create follow-up prompts that will display with circle indicators:
                 {/* White content area without border */}
                 <div className="bg-white rounded-lg p-6">
                   <div>
-                    <div className="border rounded-md overflow-hidden mb-1 focus-within:ring-1 focus-within:ring-blue-500">
-                      <CodeMirror
-                        value={newPromptContent}
-                        height="400px"
-                        extensions={[customMarkdownExtension, createPromptSyntaxHighlighter()]}
-                        onChange={handleEditorChange}
-                        placeholder={placeholderText}
-                        theme="light"
-                        style={{ 
-                          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                          fontSize: '0.875rem'
-                        }}
-                        tabIndex={1}
-                      />
-                    </div>
-                    
-                    {/* Dynamic warning that appears only when text after sequences is detected */}
-                    {(() => {
-                      // Check if there's text after numbered items
-                      const lines = newPromptContent.split('\n');
-                      for (let i = 1; i < lines.length; i++) {
-                        const prevLine = lines[i-1];
-                        const currentLine = lines[i];
-                        
-                        if (
-                          /^\d+\.\s+.*/.test(prevLine) && // Previous line is numbered
-                          currentLine.trim() !== '' && // Current line is not blank
-                          !/^\d+\.\s+.*/.test(currentLine) && // Current line is not numbered
-                          !currentLine.trim().startsWith('>') // Current line is not a note
-                        ) {
-                          // Found text right after a numbered item!
-                          return (
-                            <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-700 text-sm flex gap-2 items-start">
-                              <span className="text-yellow-500 font-bold">⚠️</span>
-                              <div>
-                                <strong>Warning:</strong> Text after numbered items appears with strikethrough and in light gray because it won't be visible in cards or when copying. Add a blank line after numbered items to continue with regular text.
-                              </div>
-                            </div>
-                          );
-                        }
-                      }
-                      return null; // No warning needed
-                    })()}
-                    
-                    {/* Syntax guide toggle */}
-                    <div className="mb-3">
-                      <button 
-                        onClick={() => setShowSyntaxGuide(!showSyntaxGuide)} 
-                        className="text-sm text-gray-400 hover:text-gray-800 flex items-center gap-1 mt-4"
-                      >
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          width="16" 
-                          height="16" 
-                          viewBox="0 0 24 24" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2" 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          className={`transition-transform ${showSyntaxGuide ? 'rotate-90' : ''}`}
-                        >
-                          <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                        <span className="font-medium">Syntax Guide</span>
-                      </button>
-                    </div>
-                    
-                    {/* Syntax guide */}
-                    {showSyntaxGuide && (
-                      <div className="mb-12 bg-gray-50 p-4 rounded-md">
-                        <div className="space-y-3 text-sm text-gray-600">
-                          <div className="flex items-start">
-                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                              <span className="text-emerald-700 font-medium uppercase">[VARIABLE]</span>
-                            </div>
-                            <div className="flex-1">
-                              Variables in brackets show in uppercase green text
-                            </div>
-                          </div>
-                          <div className="flex items-start">
-                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                              &gt; Note
-                            </div>
-                            <div className="flex-1">
-                              Context notes appear as blockquotes (not visible on homepage cards)
-                            </div>
-                          </div>
-                          <div className="flex items-start">
-                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                              1. Follow-up
-                            </div>
-                            <div className="flex-1">
-                              Numbered items become follow-up prompts with circle indicators (not visible on homepage cards)
-                            </div>
-                          </div>
-                          <div className="flex items-start">
-                            <div className="font-mono bg-white px-2 py-1 text-xs rounded border mr-3 w-28">
-                              <span className="text-gray-400 line-through opacity-60">Hidden text</span>
-                            </div>
-                            <div className="flex-1 text-gray-600">
-                              Text after numbered items will be hidden. Add a blank line after a sequence to continue with regular text.
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    {/* Block editor (no border around it) */}
+                    <BlockEditor blocks={blocks} onChange={setBlocks} />
                     
                     {/* Tags & Categories Input Section */}
                     <div className="mt-9 mb-6">
@@ -1648,101 +1193,64 @@ To create follow-up prompts that will display with circle indicators:
                         <div className="flex flex-1 items-center min-w-[120px]">
                           <input
                             type="text"
+                            placeholder="Add tags or set a category..."
+                            className="bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-xs p-0 w-full placeholder-gray-400"
                             value={tagInput}
                             onChange={handleTagInputChange}
                             onKeyDown={handleTagKeyDown}
-                            className="outline-none border-0 flex-1 text-sm font-mono tag-input"
-                            placeholder="Type to add tags or @category..."
                             ref={tagInputRef}
-                            tabIndex={2}
                           />
                         </div>
                       </div>
                       
-                      {/* Tag/Category suggestions */}
+                      {/* Tag suggestions */}
                       {suggestedTags.length > 0 && (
-                        <div className="mt-1 border rounded-md bg-white max-h-32 overflow-y-auto p-2">
-                          {/* Group items by categories and tags */}
-                          <div className="mb-2">
-                            {/* Categories group */}
-                            {suggestedTags.some(tag => isCategory(tag)) && (
-                              <div className="mb-2">
-                                <div className="text-xs text-gray-500 font-medium px-2 mb-1">Categories</div>
-                                {suggestedTags.filter(tag => isCategory(tag)).map((tag, index) => {
-                                  const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
-                                  return (
-                                    <div 
-                                      key={`category-${index}`}
-                                      className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
-                                        isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
-                                      }`}
-                                      onClick={() => {
-                                        if (selectedCategory) {
-                                          addTag(tag);
-                                        } else {
-                                          selectCategory(tag);
-                                        }
-                                      }}
-                                      data-suggestion-index={suggestedTags.indexOf(tag)}
+                        <div className="bg-white mt-1 rounded-md border border-gray-300 shadow-sm max-h-48 overflow-y-auto z-10">
+                          {suggestedTags.map((tag, index) => {
+                            const isTagCategory = tag.includes('Category:');
+                            const categoryName = isTagCategory ? tag.replace('Category:', '').trim() : '';
+                            return (
+                              <div 
+                                key={index} 
+                                className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${
+                                  selectedSuggestionIndex === index ? 'bg-gray-50' : ''
+                                }`}
+                                onClick={() => {
+                                  if (isTagCategory) {
+                                    selectCategory(categoryName);
+                                  } else {
+                                    addTag(tag);
+                                  }
+                                }}
+                              >
+                                {isTagCategory ? (
+                                  <div className="flex items-center gap-1">
+                                    <svg 
+                                      xmlns="http://www.w3.org/2000/svg" 
+                                      fill="none" 
+                                      viewBox="0 0 24 24" 
+                                      strokeWidth={1.5} 
+                                      stroke="currentColor" 
+                                      className="w-3 h-3 text-blue-600"
                                     >
-                                      <div className="flex items-center">
-                                        <div 
-                                          className={`rounded-full px-2 py-0.5 text-xs mr-2 flex items-center ${
-                                            getColorForTag(tag).bg} ${getColorForTag(tag).text
-                                          }`}
-                                        >
-                                          <svg 
-                                            xmlns="http://www.w3.org/2000/svg" 
-                                            fill="none" 
-                                            viewBox="0 0 24 24" 
-                                            strokeWidth={1.5} 
-                                            stroke="currentColor" 
-                                            className="w-3 h-3 mr-1"
-                                          >
-                                            <path 
-                                              strokeLinecap="round" 
-                                              strokeLinejoin="round" 
-                                              d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
-                                            />
-                                          </svg>
-                                          {tag}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                                      <path 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
+                                      />
+                                    </svg>
+                                    <span className="font-medium">{categoryName}</span>
+                                    <span className="text-xs text-gray-400">Category</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center">
+                                    <span className="mr-1 font-medium text-gray-600">#</span>
+                                    {tag}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            
-                            {/* Tags group */}
-                            {suggestedTags.some(tag => !isCategory(tag)) && (
-                              <div>
-                                <div className="text-xs text-gray-500 font-medium px-2 mb-1">Tags</div>
-                                {suggestedTags.filter(tag => !isCategory(tag)).map((tag, index) => {
-                                  const isSelected = selectedSuggestionIndex === suggestedTags.indexOf(tag);
-                                  return (
-                                    <div 
-                                      key={`tag-${index}`}
-                                      className={`px-3 py-1.5 text-sm cursor-pointer m-1 rounded-md hover:bg-gray-50 ${
-                                        isSelected ? 'bg-gray-50 ring-1 ring-blue-400' : ''
-                                      }`}
-                                      onClick={() => addTag(tag)}
-                                      data-suggestion-index={suggestedTags.indexOf(tag)}
-                                    >
-                                      <div className="flex items-center">
-                                        <div 
-                                          className="rounded-full px-2 py-0.5 text-xs mr-2 flex items-center bg-gray-100 text-gray-600"
-                                        >
-                                          <span className="mr-1 font-medium">#</span>
-                                          {tag}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
+                            );
+                          })}
                         </div>
                       )}
                       
