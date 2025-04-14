@@ -17,10 +17,14 @@ interface OpenRouterResponse {
  */
 export async function POST(request: NextRequest) {
   console.log("API: /api/generate-title endpoint called");
+  console.log("API: Request headers:", Object.fromEntries(request.headers.entries()));
+  console.log("API: Request method:", request.method);
+  console.log("API: Request URL:", request.url);
   
   try {
     // Parse the request body
     const body = await request.json();
+    console.log("API: Request body received:", typeof body);
     const { content } = body;
     
     console.log("API: Received content length:", content?.length || 0);
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log("API: API key is configured, preparing prompt");
+    console.log("API: API key is configured (length:", apiKey.length, ")");
     
     // Prepare prompt for title generation
     const systemPrompt = "You are a helpful assistant that generates concise, descriptive titles for AI prompts. The title should be 2-6 words, capturing the essence of the prompt.";
@@ -63,50 +67,58 @@ export async function POST(request: NextRequest) {
     
     console.log("API: Calling OpenRouter API");
     
-    // Make API request to OpenRouter
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': request.headers.get('referer') || 'https://promptgarden.app',
-        'X-Title': 'Prompt Garden'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku:beta', // Using Claude 3 Haiku for efficiency
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 50 // Short response for a title
-      })
-    });
-    
-    console.log("API: OpenRouter response status:", response.status);
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('API: OpenRouter API error:', errorData);
+    try {
+      // Make API request to OpenRouter
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': request.headers.get('referer') || 'https://promptgarden.app',
+          'X-Title': 'Prompt Garden'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-haiku:beta', // Using Claude 3 Haiku for efficiency
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_tokens: 50 // Short response for a title
+        })
+      });
+      
+      console.log("API: OpenRouter response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API: OpenRouter API error:', errorData);
+        return NextResponse.json(
+          { success: false, message: 'Error from OpenRouter API', error: errorData },
+          { status: 500 }
+        );
+      }
+      
+      // Parse the response
+      const data = await response.json() as OpenRouterResponse;
+      console.log("API: OpenRouter raw response:", data);
+      
+      // Extract the title from the response
+      let generatedTitle = data.choices[0]?.message?.content?.trim() || 'Untitled Prompt';
+      
+      // Remove quotes if the model returned them
+      generatedTitle = generatedTitle.replace(/^["'](.*)["']$/, '$1');
+      
+      console.log("API: Generated title:", generatedTitle);
+      
+      // Return the generated title
+      return NextResponse.json({ success: true, title: generatedTitle });
+    } catch (openRouterError) {
+      console.error('API: Error during OpenRouter API call:', openRouterError);
       return NextResponse.json(
-        { success: false, message: 'Error from OpenRouter API' },
+        { success: false, message: 'OpenRouter API call failed', error: openRouterError instanceof Error ? openRouterError.message : 'Unknown error' },
         { status: 500 }
       );
     }
-    
-    // Parse the response
-    const data = await response.json() as OpenRouterResponse;
-    console.log("API: OpenRouter raw response:", data);
-    
-    // Extract the title from the response
-    let generatedTitle = data.choices[0]?.message?.content?.trim() || 'Untitled Prompt';
-    
-    // Remove quotes if the model returned them
-    generatedTitle = generatedTitle.replace(/^["'](.*)["']$/, '$1');
-    
-    console.log("API: Generated title:", generatedTitle);
-    
-    // Return the generated title
-    return NextResponse.json({ success: true, title: generatedTitle });
   } catch (error) {
     console.error('API: Error generating title:', error);
     return NextResponse.json(

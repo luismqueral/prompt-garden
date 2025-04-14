@@ -291,6 +291,8 @@ To create follow-up prompts that will display with circle indicators:
       // Convert blocks to content string
       const content = blocksToContent(blocks);
       
+      console.log("addNewPrompt: Starting process with content length:", content.length);
+      
       // Find title from first heading, if present (keep existing logic)
       let title = "";
       const firstLine = content.split('\n')[0];
@@ -298,21 +300,28 @@ To create follow-up prompts that will display with circle indicators:
         title = firstLine.substring(2).trim();
       }
       
-      // If no title found, generate one using OpenRouter
-      if (!title) {
-        try {
-          setSuccessMessage("Generating title...");
-          setShowSuccess(true);
-          title = await TitleGeneratorService.generateTitle(content);
-        } catch (error) {
-          console.error("Error generating title:", error);
-          title = "Untitled Prompt";
-        }
+      console.log("addNewPrompt: Raw title from content:", title);
+      
+      // For testing: Always try to generate a title regardless of whether we found one
+      // Comment this out after testing
+      try {
+        console.log("addNewPrompt: Force attempting title generation for testing...");
+        setSuccessMessage("Generating title...");
+        setShowSuccess(true);
+        const generatedTitle = await TitleGeneratorService.generateTitle(content);
+        console.log("addNewPrompt: Generated title result:", generatedTitle);
+        title = generatedTitle || title || 'Untitled Prompt';
+      } catch (error) {
+        console.error("addNewPrompt: Error generating title:", error);
+        // If generation fails, fall back to existing title or default
+        title = title || 'Untitled Prompt';
       }
+      
+      console.log("addNewPrompt: Final title:", title);
       
       // Create the prompt data object
       const promptData = {
-        title: title || 'Untitled Prompt',
+        title: title,
         content,
         tags: selectedTags,
         category: selectedCategory || undefined
