@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Title Generation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            min-height: 100px;
+        }
+        .log {
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 5px 0;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Title Generation API</h1>
+    <p>Use this page to test the title generation API directly.</p>
+    
+    <h2>Prompt Content</h2>
+    <textarea id="content">This is a test prompt content.
+
+I would like to generate a great email template for customer service.
+It should be professional but friendly, and include placeholders for:
+- Customer name
+- Order number
+- Issue description
+- Resolution steps</textarea>
+    
+    <button id="generate">Generate Title</button>
+    
+    <div id="result">
+        <p>Results will appear here...</p>
+    </div>
+
+    <script>
+        document.getElementById('generate').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p class="log">Starting title generation test...</p>';
+            
+            const content = document.getElementById('content').value;
+            
+            try {
+                const log = (message, className = '') => {
+                    const p = document.createElement('p');
+                    p.className = `log ${className}`;
+                    p.textContent = message;
+                    resultDiv.appendChild(p);
+                };
+                
+                log('Making API request to /api/generate-title...');
+                
+                const response = await fetch('/api/generate-title', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content }),
+                });
+                
+                log(`Response status: ${response.status}`);
+                
+                const data = await response.json();
+                log(`Response data: ${JSON.stringify(data, null, 2)}`);
+                
+                if (data.success && data.title) {
+                    log(`Generated title: "${data.title}"`, 'success');
+                } else {
+                    log(`Title generation failed: ${data.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                log(`Error making API request: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html> 
