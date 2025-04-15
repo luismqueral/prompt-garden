@@ -34,9 +34,14 @@ export function PromptBlock({ id, content, onChange, onDelete }: PromptBlockProp
   
   // Focus the textarea when the component mounts with empty content
   useEffect(() => {
-    if (textareaRef.current && !content) {
-      // Focus and select any content in the textarea
+    if (textareaRef.current) {
+      // Always focus the textarea
       textareaRef.current.focus();
+      
+      // If there's content (like from a snippet), select it all
+      if (content) {
+        textareaRef.current.select();
+      }
     }
   }, [content]);
   
@@ -94,7 +99,7 @@ export function PromptBlock({ id, content, onChange, onDelete }: PromptBlockProp
         value={localContent}
         onChange={handleChange}
         placeholder="Enter your prompt here..."
-        className="w-full p-2 min-h-[120px] border-0 focus:ring-0 text-sm resize-y font-mono"
+        className="w-full p-2 min-h-[240px] border-0 focus:ring-0 text-sm resize-y font-mono"
         style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
         spellCheck="false"
       />
