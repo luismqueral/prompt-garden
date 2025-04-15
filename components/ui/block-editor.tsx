@@ -78,23 +78,27 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <div className="relative">
                   <button
                     onClick={() => setShowMenuAt(-1)}
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 shadow-sm transition-colors group relative"
+                    aria-label="Add new block"
                   >
                     <MdAdd size={20} />
+                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                      Add new prompt or note
+                    </div>
                   </button>
                   {showMenuAt === -1 && (
-                    <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 bg-white rounded shadow-lg p-2 z-10 min-w-[140px]">
+                    <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 bg-white rounded shadow-lg p-2 z-10 min-w-[180px]">
                       <div 
                         className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
                         onClick={() => addBlockAtIndex('prompt', 0)}
                       >
-                        Prompt Block
+                        Add Follow-Up Prompt
                       </div>
                       <div 
                         className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
                         onClick={() => addBlockAtIndex('note', 0)}
                       >
-                        Note Block
+                        Add Contextual Note
                       </div>
                     </div>
                   )}
@@ -121,6 +125,41 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                         />
                       )}
                     </div>
+                    
+                    {/* Add button between blocks */}
+                    {index < blocks.length - 1 && (
+                      <div className="relative h-4 my-1">
+                        <div className="absolute left-1/2 transform -translate-x-1/2">
+                          <button
+                            onClick={() => setShowMenuAt(index + 1)}
+                            className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 shadow-sm group relative"
+                            aria-label="Add new block"
+                          >
+                            <MdAdd size={12} />
+                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                              Add new prompt or note
+                            </div>
+                          </button>
+                          
+                          {showMenuAt === index + 1 && (
+                            <div className="absolute top-5 left-1/2 transform -translate-x-1/2 bg-white rounded shadow-lg p-2 z-10 min-w-[180px]">
+                              <div 
+                                className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
+                                onClick={() => addBlockAtIndex('prompt', index + 1)}
+                              >
+                                Add Follow-Up Prompt
+                              </div>
+                              <div 
+                                className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
+                                onClick={() => addBlockAtIndex('note', index + 1)}
+                              >
+                                Add Contextual Note
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </React.Fragment>
                 ))}
                 
@@ -129,24 +168,28 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   <div className="absolute left-1/2 transform -translate-x-1/2">
                     <button
                       onClick={() => setShowMenuAt(blocks.length)}
-                      className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
+                      className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 shadow-sm group relative"
+                      aria-label="Add new block"
                     >
                       <MdAdd size={14} />
+                      <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        Add new prompt or note
+                      </div>
                     </button>
                     
                     {showMenuAt === blocks.length && (
-                      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white rounded shadow-lg p-2 z-10 min-w-[140px]">
+                      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white rounded shadow-lg p-2 z-10 min-w-[180px]">
                         <div 
                           className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
                           onClick={() => addBlockAtIndex('prompt', blocks.length)}
                         >
-                          Prompt Block
+                          Add Follow-Up Prompt
                         </div>
                         <div 
                           className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
                           onClick={() => addBlockAtIndex('note', blocks.length)}
                         >
-                          Note Block
+                          Add Contextual Note
                         </div>
                       </div>
                     )}
