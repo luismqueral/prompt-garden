@@ -69,38 +69,57 @@ export default function PromptDetailPage() {
   
   // Handle fork prompt
   const handleForkPrompt = () => {
-    if (!prompt) return;
+    console.log("FORK: Fork button clicked");
     
-    // Add animation effect on click
+    // Check if prompt is available
+    if (!prompt) {
+      console.error("FORK ERROR: prompt state is null or undefined");
+      return;
+    }
+    
+    // Add animation effect
     const button = document.getElementById('fork-prompt-btn');
     if (button) {
       button.classList.add('clicked');
-      setTimeout(() => {
-        button.classList.remove('clicked');
-      }, 300);
+      setTimeout(() => button.classList.remove('clicked'), 300);
     }
     
-    console.log("Forking prompt:", prompt.title);
-    console.log("Content to be stored:", prompt.content);
-    console.log("Tags to be stored:", prompt.tags || []);
-    
-    // Store prompt data in sessionStorage for the Add Prompt page
-    sessionStorage.setItem("remixPromptContent", prompt.content);
-    sessionStorage.setItem("remixPromptTitle", prompt.title);
-    sessionStorage.setItem("remixPromptTags", JSON.stringify(prompt.tags || []));
-    
-    // Verify it's been stored
-    console.log("Stored in sessionStorage:", {
-      content: sessionStorage.getItem("remixPromptContent")?.slice(0, 50) + "...",
-      title: sessionStorage.getItem("remixPromptTitle"),
-      tags: sessionStorage.getItem("remixPromptTags")
-    });
-    
-    // Add a small delay before redirecting to ensure sessionStorage is set
-    setTimeout(() => {
-      // Force full page reload through direct URL change
-      window.location.href = "/?view=create";
-    }, 100);
+    try {
+      // Store data in sessionStorage
+      console.log(`FORK: Storing prompt "${prompt.title}" content (${prompt.content.length} chars)`);
+      
+      // Clear any existing data first
+      sessionStorage.removeItem("remixPromptContent");
+      sessionStorage.removeItem("remixPromptTitle");
+      sessionStorage.removeItem("remixPromptTags");
+      
+      // Set the data
+      sessionStorage.setItem("remixPromptContent", prompt.content);
+      sessionStorage.setItem("remixPromptTitle", prompt.title);
+      sessionStorage.setItem("remixPromptTags", JSON.stringify(prompt.tags || []));
+      
+      // Verify storage worked
+      const contentCheck = sessionStorage.getItem("remixPromptContent");
+      if (!contentCheck) {
+        throw new Error("Failed to store content in sessionStorage");
+      }
+      
+      console.log("FORK: Storage verification successful, redirecting...");
+      
+      // Add timestamp to force fresh URL and prevent browser/Next.js caching
+      const timestamp = Date.now();
+      
+      // Do the navigation last, after all storage is confirmed
+      if (typeof window !== 'undefined') {
+        window.location.href = `/?view=create&t=${timestamp}`; // Use direct navigation
+      } else {
+        router.push(`/?view=create&t=${timestamp}`);
+      }
+      
+    } catch (error) {
+      console.error("FORK ERROR:", error);
+      alert("There was a problem forking this prompt. Please try again.");
+    }
   };
   
   if (isLoading) {

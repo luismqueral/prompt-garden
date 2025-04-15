@@ -35,7 +35,7 @@ import { MdSearch, MdClose, MdContentCopy, MdCheck, MdAutoFixHigh } from "react-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { BlockEditor, Block } from '@/components/ui/block-editor';
 import { blocksToContent, contentToBlocks } from '@/lib/utils/blockUtils';
@@ -66,6 +66,9 @@ type Prompt = {
 const initialPrompts: Prompt[] = [];
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -85,12 +88,11 @@ export default function HomePage() {
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
   const [isRemixMode, setIsRemixMode] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [blocks, setBlocks] = useState<Block[]>([
-    { id: `block-${Date.now()}`, type: 'prompt', content: '' }
+    { id: `block-${Date.now()}-default`, type: 'prompt', content: '' }
   ]);
   const [titleInput, setTitleInput] = useState("");
   const [titleGenerating, setTitleGenerating] = useState(false);
@@ -113,11 +115,10 @@ To create follow-up prompts that will display with circle indicators:
 2. Add your follow-up prompt text here
 3. Each numbered item becomes a follow-up prompt`;
 
-  // Load prompts from Google Sheets API on component mount
+  // Load prompts from API on component mount
   useEffect(() => {
     const loadPrompts = async () => {
       try {
-        // Get prompts from Google Sheets API
         const apiPrompts = await PromptService.getAllPrompts();
         setPrompts(apiPrompts);
       } catch (error) {
@@ -127,91 +128,8 @@ To create follow-up prompts that will display with circle indicators:
         setIsLoaded(true);
       }
     };
-    
     loadPrompts();
-    
-    // Check URL params for view
-    const params = new URLSearchParams(window.location.search);
-    const viewParam = params.get('view');
-    if (viewParam === 'create') {
-      setActiveView('create');
-    }
-    
-    // Check for remix data in sessionStorage
-    const remixContent = sessionStorage.getItem("remixPromptContent");
-    const remixTitle = sessionStorage.getItem("remixPromptTitle");
-    const remixTagsJson = sessionStorage.getItem("remixPromptTags");
-    const shouldFocusTitle = sessionStorage.getItem("focusAndSelectTitle");
-    const shouldFocusContent = sessionStorage.getItem("focusAndSelectContent");
-    
-    console.log("Checking for remix data in sessionStorage:", {
-      hasContent: !!remixContent,
-      hasTitle: !!remixTitle,
-      hasTagsJson: !!remixTagsJson
-    });
-    
-    if (remixContent) {
-      console.log("Found remixContent, initializing remix mode");
-      setIsRemixMode(true);
-      
-      // Explicitly set the active view to create
-      console.log("Explicitly setting activeView to 'create'");
-      setActiveView('create');
-      
-      // Convert content to blocks for the block editor
-      const remixBlocks = contentToBlocks(remixContent);
-      console.log("Converted content to blocks:", remixBlocks);
-      setBlocks(remixBlocks);
-      
-      if (remixTitle) {
-        console.log("Setting title input:", remixTitle);
-        setTitleInput(remixTitle);
-      }
-      
-      // Set tags if they exist
-      if (remixTagsJson) {
-        try {
-          const remixTags = JSON.parse(remixTagsJson);
-          console.log("Setting tags:", remixTags);
-          setSelectedTags(remixTags);
-        } catch (e) {
-          console.error("Error parsing remix tags:", e);
-        }
-      }
-      
-      // Focus on the title input if the flag is set
-      if (shouldFocusTitle) {
-        // We'll use this in a separate useEffect to ensure the DOM is ready
-        setTimeout(() => {
-          if (titleInputRef.current) {
-            titleInputRef.current.focus();
-            titleInputRef.current.select();
-          }
-          sessionStorage.removeItem("focusAndSelectTitle");
-        }, 100);
-      }
-      
-      // Focus on the content textarea if the flag is set
-      if (shouldFocusContent) {
-        setTimeout(() => {
-          if (contentTextareaRef.current) {
-            contentTextareaRef.current.focus();
-            contentTextareaRef.current.select();
-          }
-          sessionStorage.removeItem("focusAndSelectContent");
-        }, 100);
-      }
-      
-      // Clear the remix data from session storage after a short delay
-      // to ensure all state updates have been processed
-      setTimeout(() => {
-        console.log("Clearing sessionStorage after processing data");
-        sessionStorage.removeItem("remixPromptContent");
-        sessionStorage.removeItem("remixPromptTitle");
-        sessionStorage.removeItem("remixPromptTags");
-      }, 500);
-    }
-  }, []);
+  }, []); // Runs only on mount
 
   // Save prompts to localStorage whenever they change
   useEffect(() => {
@@ -220,118 +138,180 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [prompts, isLoaded]);
 
-  // Focus search input when browse view is active
+  // Simplified Effect for View & Remix Management
   useEffect(() => {
-    if (activeView === "browse" && searchInputRef.current) {
-      // Small delay to ensure the DOM is fully ready
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isLoaded, activeView, activeTag]);
-
-  // Re-focus search input when filter/tag is cleared or changed
-  useEffect(() => {
-    if (activeView === "browse" && searchInputRef.current) {
-      // Focus search input when filters change
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
-    }
-  }, [activeTag]);
-
-  // Focus search when returning to browse view
-  useEffect(() => {
-    if (activeView === "browse" && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [activeView]);
-
-  // Check for URL params on mount to set the correct view
-  useEffect(() => {
-    const handleURLParams = () => {
-      // Check if we're in a browser environment
-      if (typeof window !== 'undefined') {
-        const searchParams = new URLSearchParams(window.location.search);
-        const viewParam = searchParams.get('view');
+    // Get the "view" parameter from the URL
+    const viewParam = searchParams.get('view');
+    
+    // Check for "create" view
+    if (viewParam === 'create') {
+      console.log("VIEW: Create view requested");
+      
+      // Set the view state
+      setActiveView('create');
+      
+      // Check for remix data in sessionStorage
+      const remixContent = sessionStorage.getItem("remixPromptContent");
+      
+      if (remixContent) {
+        console.log("REMIX: Found content in sessionStorage. Length:", remixContent.length);
         
-        console.log("URL params changed - view param:", viewParam);
-        
-        if (viewParam === 'create') {
-          console.log("Setting view to create");
-          setActiveView('create');
-        } else {
-          console.log("Setting view to browse");
-          setActiveView('browse');
+        try {
+          // Get title and tags
+          const remixTitle = sessionStorage.getItem("remixPromptTitle") || "";
+          const remixTagsJson = sessionStorage.getItem("remixPromptTags");
+          const remixTags = remixTagsJson ? JSON.parse(remixTagsJson) : [];
+          
+          // Set all state at once for consistency
+          console.log("REMIX: Setting form state with remix data");
+          setIsRemixMode(true);
+          setBlocks(contentToBlocks(remixContent));
+          setTitleInput(remixTitle);
+          setSelectedTags(remixTags);
+          setSelectedCategory(null);
+          
+          // Clear sessionStorage after we've used the data
+          console.log("REMIX: Clearing sessionStorage");
+          sessionStorage.removeItem("remixPromptContent");
+          sessionStorage.removeItem("remixPromptTitle");
+          sessionStorage.removeItem("remixPromptTags");
+        } catch (error) {
+          console.error("Error processing remix data:", error);
+          // If there's an error, reset to defaults
+          setIsRemixMode(false);
+          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+          setTitleInput("");
+          setSelectedTags([]);
+          setSelectedCategory(null);
+        }
+      } else {
+        // No remix data, set up a new prompt
+        console.log("REMIX: No remix data found, setting up new prompt");
+        // Only reset if we're not already in remix mode
+        if (!isRemixMode) {
+          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+          setTitleInput("");
+          setSelectedTags([]);
+          setSelectedCategory(null);
         }
       }
-    };
-    
-    handleURLParams();
-    
-    // Also listen for popstate events (browser back/forward)
-    window.addEventListener('popstate', handleURLParams);
-    
-    // Add event listener for URL changes
-    const checkURLInterval = setInterval(() => {
-      const currentParams = new URLSearchParams(window.location.search);
-      const viewParam = currentParams.get('view');
+    } else {
+      // Browse view
+      console.log("VIEW: Browse view active");
+      setActiveView('browse');
       
-      // If URL has view=create but activeView is not 'create', update it
-      if (viewParam === 'create' && activeView !== 'create') {
-        console.log("URL has view=create but activeView is not 'create', updating view");
-        setActiveView('create');
+      // Ensure remix mode is off
+      if (isRemixMode) {
+        setIsRemixMode(false);
       }
-    }, 100);
-    
-    return () => {
-      window.removeEventListener('popstate', handleURLParams);
-      clearInterval(checkURLInterval);
-    };
-  }, [activeView]);
-  
+      
+      // Focus search input
+      if (searchInputRef.current) {
+        setTimeout(() => searchInputRef.current?.focus(), 100);
+      }
+    }
+  }, [searchParams]); // Only depend on URL parameters
+
+  // Focus search input when browse view becomes active
+  useEffect(() => {
+    if (activeView === "browse" && searchInputRef.current) {
+      // Small delay to ensure the DOM is fully ready and visible
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [activeView, activeTag]); // Re-focus when tag changes too
+
   // Update URL when activeView changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
+      const currentViewParam = url.searchParams.get('view');
       
-      if (activeView === 'create') {
+      if (activeView === 'create' && currentViewParam !== 'create') {
         url.searchParams.set('view', 'create');
-      } else {
+        window.history.pushState({ view: 'create' }, '', url);
+      } else if (activeView === 'browse' && currentViewParam === 'create') {
         url.searchParams.delete('view');
+        window.history.pushState({ view: 'browse' }, '', url);
       }
+    }
+  }, [activeView]);
+
+  // Handle initialization logic when switching to 'create' view
+  useEffect(() => {
+    if (activeView === "create") {
+      console.log("Active view switched to 'create'. Checking for remix data.");
       
-      // Update URL without a full page reload
-      window.history.pushState({}, '', url);
-    }
-  }, [activeView]);
+      // Check for remix data in sessionStorage FIRST
+      const remixContent = sessionStorage.getItem("remixPromptContent");
+      const remixTitle = sessionStorage.getItem("remixPromptTitle");
+      const remixTagsJson = sessionStorage.getItem("remixPromptTags");
 
-  // Update this useEffect to initialize blocks when entering create view
-  useEffect(() => {
-    if (activeView === "create" && blocks.length === 1 && blocks[0].content === '') {
-      // Set a sample prompt in the first block
-      setBlocks([
-        { 
-          id: `block-${Date.now()}`, 
-          type: 'prompt', 
-          content: placeholderText
+      if (remixContent) {
+        console.log("Found remix data. Setting up editor for remix.");
+        setIsRemixMode(true);
+
+        const remixBlocks = contentToBlocks(remixContent);
+        console.log("Converted remix content to blocks:", remixBlocks);
+        setBlocks(remixBlocks);
+
+        if (remixTitle) {
+          console.log("Setting remix title:", remixTitle);
+          setTitleInput(remixTitle);
+        } else {
+          setTitleInput(""); // Clear title if none provided in remix
         }
-      ]);
-    }
-  }, [activeView]);
 
-  // Reset blocks when switching to create view (but don't reset if we're in remix mode)
-  useEffect(() => {
-    // Skip this reset if we're in remix mode (data from sessionStorage)
-    if (activeView === "create" && !isRemixMode) {
-      setBlocks([
-        { id: `block-${Date.now()}`, type: 'prompt', content: '' }
-      ]);
-      setTitleInput("");
-      setSelectedTags([]);
-      setSelectedCategory(null);
+        if (remixTagsJson) {
+          try {
+            const remixTags = JSON.parse(remixTagsJson);
+            console.log("Setting remix tags:", remixTags);
+            setSelectedTags(remixTags);
+            // Assuming category might be part of tags or a separate item if needed
+            setSelectedCategory(null); // Reset category for remix unless specified otherwise
+          } catch (e) {
+            console.error("Error parsing remix tags:", e);
+            setSelectedTags([]);
+            setSelectedCategory(null);
+          }
+        } else {
+          setSelectedTags([]);
+          setSelectedCategory(null);
+        }
+        
+        // Clear sessionStorage immediately after use
+        console.log("Clearing remix sessionStorage data.");
+        sessionStorage.removeItem("remixPromptContent");
+        sessionStorage.removeItem("remixPromptTitle");
+        sessionStorage.removeItem("remixPromptTags");
+        
+        // Potentially focus inputs if needed (e.g., title or first block)
+        // setTimeout(() => titleInputRef.current?.focus(), 100); 
+
+      } else {
+        console.log("No remix data found. Resetting create form.");
+        // No remix data, reset to default 'create' state
+        setIsRemixMode(false);
+        setBlocks([
+          { id: `block-${Date.now()}-init`, type: 'prompt', content: placeholderText }
+        ]);
+        setTitleInput("");
+        setSelectedTags([]);
+        setSelectedCategory(null);
+        setTitleError(null);
+        // Optional: Focus title input for new prompt
+        // setTimeout(() => titleInputRef.current?.focus(), 100);
+      }
+    } else {
+      // If switching away from 'create' view, ensure remix mode is off
+      // Although potentially redundant if state resets correctly
+      if (isRemixMode) {
+          console.log("Switched away from create view, ensuring isRemixMode is false.");
+          setIsRemixMode(false); 
+      }
     }
-  }, [activeView, isRemixMode]);
+  }, [activeView]); // Run ONLY when activeView changes
 
   // Modify the addNewPrompt function
   const addNewPrompt = async () => {
@@ -390,7 +370,7 @@ To create follow-up prompts that will display with circle indicators:
       setIsRemixMode(false);
       
       // Switch to browse view
-      setActiveView('browse');
+      router.push('/');
     } catch (error) {
       console.error('Error creating prompt:', error);
       alert('Failed to create prompt. Please try again.');
@@ -1029,18 +1009,16 @@ To create follow-up prompts that will display with circle indicators:
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Cmd+Enter (macOS) or Ctrl+Enter (Windows/Linux)
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (activeView === "create") {
-          addNewPrompt();
+        if (activeView === "create") { // Check activeView state
+            e.preventDefault();
+            addNewPrompt();
         }
       }
     };
-    
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeView]);
+  }, [activeView, blocks, titleInput, selectedTags, selectedCategory, isSubmitting, isRemixMode]); // Keep dependencies
 
   // Skeleton loading component
   const SkeletonLoader = () => {
@@ -1073,7 +1051,7 @@ To create follow-up prompts that will display with circle indicators:
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Main navigation - transparent header bar */}
       <Header 
-        onAddPromptClick={() => setActiveView("create")}
+        onAddPromptClick={() => router.push('/?view=create')}
         isCreateView={activeView === "create"}
       />
       
@@ -1160,7 +1138,9 @@ To create follow-up prompts that will display with circle indicators:
               {/* Content area - WIDER WIDTH */}
               <div className="px-6 py-4 flex-1 mx-auto max-w-3xl w-full">
                 {/* Title above content area */}
-                <h1 className="text-2xl font-bold mb-6 text-center">Add New Prompt</h1>
+                <h1 className="text-2xl font-bold mb-6 text-center">
+                  {isRemixMode ? "Remix Prompt" : "Add New Prompt"}
+                </h1>
                 
                 {/* White content area without border */}
                 <div className="bg-white rounded-lg p-6">
