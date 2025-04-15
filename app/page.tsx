@@ -94,6 +94,7 @@ export default function HomePage() {
   const [blocks, setBlocks] = useState<Block[]>([
     { id: `block-${Date.now()}`, type: 'prompt', content: '' }
   ]);
+  const [titleInput, setTitleInput] = useState("");
 
   // Define the tutorial placeholder text
   const placeholderText = `# How to Create a Prompt
@@ -281,6 +282,18 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [activeView]);
 
+  // Reset blocks when switching to create view
+  useEffect(() => {
+    if (activeView === "create") {
+      setBlocks([
+        { id: `block-${Date.now()}`, type: 'prompt', content: '' }
+      ]);
+      setTitleInput("");
+      setSelectedTags([]);
+      setSelectedCategory(null);
+    }
+  }, [activeView]);
+
   // Modify the addNewPrompt function
   const addNewPrompt = async () => {
     if (isSubmitting) return; // Prevent multiple submissions
@@ -291,34 +304,25 @@ To create follow-up prompts that will display with circle indicators:
       // Convert blocks to content string
       const content = blocksToContent(blocks);
       
-      console.log("addNewPrompt: Starting process with content length:", content.length);
+      // Get title from title input field
+      let title = titleInput.trim();
       
-      // Find title from first heading, if present (keep existing logic)
-      let title = "";
-      const firstLine = content.split('\n')[0];
-      if (firstLine && firstLine.startsWith('# ')) {
-        title = firstLine.substring(2).trim();
-      }
-      
-      console.log("addNewPrompt: Raw title from content:", title);
-      
-      // If no title found, generate one using OpenRouter
+      // If no title in the input field, check if there's one in the content
       if (!title) {
-        try {
-          setSuccessMessage("Creating a descriptive title for your prompt...");
-          setShowSuccess(true);
-          title = await TitleGeneratorService.generateTitle(content);
-        } catch (error) {
-          console.error("addNewPrompt: Error generating title:", error);
-          title = "Untitled Prompt";
+        const firstLine = content.split('\n')[0];
+        if (firstLine && firstLine.startsWith('# ')) {
+          title = firstLine.substring(2).trim();
         }
       }
       
-      console.log("addNewPrompt: Final title:", title);
+      // If still no title, use default
+      if (!title) {
+        title = "Untitled Prompt";
+      }
       
       // Create the prompt data object
       const promptData = {
-        title: title,
+        title,
         content,
         tags: selectedTags,
         category: selectedCategory || undefined
@@ -326,6 +330,7 @@ To create follow-up prompts that will display with circle indicators:
       
       // Update success message
       setSuccessMessage("Saving prompt...");
+      setShowSuccess(true);
       
       // Save to Google Sheets using the API
       const createdPrompt = await PromptService.addPrompt(promptData);
@@ -343,6 +348,7 @@ To create follow-up prompts that will display with circle indicators:
       
       // Reset form
       setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: '' }]);
+      setTitleInput("");
       setSelectedTags([]);
       setSelectedCategory(null);
       setIsRemixMode(false);
@@ -1133,29 +1139,48 @@ To create follow-up prompts that will display with circle indicators:
                     {/* Block editor (no border around it) */}
                     <BlockEditor blocks={blocks} onChange={setBlocks} />
                     
-                    {/* Test title generation button - for debugging only */}
-                    <div className="mt-2 mb-4 flex justify-end">
-                      <button
-                        onClick={async () => {
-                          const content = blocksToContent(blocks);
-                          console.log("TEST: Triggering title generation with content:", content.substring(0, 100) + "...");
-                          try {
-                            setSuccessMessage("Creating a natural-sounding title...");
-                            setShowSuccess(true);
-                            const title = await TitleGeneratorService.generateTitle(content);
-                            console.log("TEST: Title generation result:", title);
-                            setSuccessMessage(`Generated title: "${title}"`);
-                            setTimeout(() => setShowSuccess(false), 5000);
-                          } catch (error) {
-                            console.error("TEST: Title generation error:", error);
-                            setSuccessMessage("Title generation failed. See console.");
-                            setTimeout(() => setShowSuccess(false), 3000);
-                          }
-                        }}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                      >
-                        Generate Descriptive Title
-                      </button>
+                    {/* Title input field */}
+                    <div className="mt-6 mb-2">
+                      <label htmlFor="promptTitle" className="block text-sm font-medium text-gray-700 mb-1">
+                        Prompt Title
+                      </label>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          id="promptTitle"
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="Enter a title for your prompt"
+                          value={titleInput}
+                          onChange={(e) => setTitleInput(e.target.value)}
+                        />
+                        <button
+                          onClick={async () => {
+                            const content = blocksToContent(blocks);
+                            if (!content.trim()) {
+                              setSuccessMessage("Please add content to your prompt first");
+                              setShowSuccess(true);
+                              setTimeout(() => setShowSuccess(false), 3000);
+                              return;
+                            }
+                            
+                            try {
+                              setSuccessMessage("Generating title...");
+                              setShowSuccess(true);
+                              const title = await TitleGeneratorService.generateTitle(content);
+                              setTitleInput(title);
+                              setSuccessMessage(`Generated title: "${title}"`);
+                              setTimeout(() => setShowSuccess(false), 2000);
+                            } catch (error) {
+                              console.error("Error generating title:", error);
+                              setSuccessMessage("Failed to generate title. Please try again.");
+                              setTimeout(() => setShowSuccess(false), 3000);
+                            }
+                          }}
+                          className="ml-2 inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        >
+                          Generate Title
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Tags & Categories Input Section */}
