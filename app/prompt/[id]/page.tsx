@@ -231,30 +231,8 @@ export default function PromptDetailPage() {
           promptTitle={prompt?.title}
         />
         
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{prompt.title}</h1>
-          
-          {/* Fork prompt button - moved here */}
-          <button
-            onClick={handleForkPrompt}
-            id="fork-prompt-btn"
-            className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner disabled:opacity-70 disabled:cursor-not-allowed"
-            aria-label="Fork this prompt"
-            disabled={isForkLoading}
-          >
-            {isForkLoading ? (
-              <>
-                <span className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full mr-1"></span>
-                Forking...
-              </>
-            ) : (
-              <>
-                <MdAltRoute className="fork-icon text-gray-500" size={16} />
-                fork prompt
-              </>
-            )}
-          </button>
-        </div>
+        {/* Title centered above content area */}
+        <h1 className="text-2xl font-bold text-center mb-6">{prompt.title}</h1>
         
         <div className="bg-white rounded-lg shadow-sm p-6 relative">
           {/* Render blocks */}
@@ -379,8 +357,8 @@ export default function PromptDetailPage() {
                 })}
               </div>
               
-              {/* Edit/Delete buttons - moved here */}
-              <div className="flex space-x-4">
+              {/* Edit/Delete/Fork buttons at bottom right */}
+              <div className="flex space-x-4 items-center">
                 <button 
                   onClick={handleEditPrompt}
                   className="text-blue-600 hover:underline text-sm"
@@ -393,16 +371,36 @@ export default function PromptDetailPage() {
                 >
                   Delete
                 </button>
+                <button
+                  onClick={handleForkPrompt}
+                  id="fork-prompt-btn"
+                  className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner disabled:opacity-70 disabled:cursor-not-allowed"
+                  aria-label="Fork this prompt"
+                  disabled={isForkLoading}
+                >
+                  {isForkLoading ? (
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full mr-1"></span>
+                      Forking...
+                    </>
+                  ) : (
+                    <>
+                      <MdAltRoute className="fork-icon text-gray-500" size={16} />
+                      fork prompt
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-            
-            <div className="text-gray-400 text-xs mt-2">
-              Created: {new Date(prompt.createdAt).toLocaleDateString()}
-              {prompt.updatedAt !== prompt.createdAt && (
-                <span> | Updated: {new Date(prompt.updatedAt).toLocaleDateString()}</span>
-              )}
-            </div>
           </div>
+        </div>
+        
+        {/* Created/updated metadata below the white content area */}
+        <div className="text-gray-400 text-xs mt-4 text-center">
+          Created: {new Date(prompt.createdAt).toLocaleDateString()}
+          {prompt.updatedAt !== prompt.createdAt && (
+            <span> | Updated: {new Date(prompt.updatedAt).toLocaleDateString()}</span>
+          )}
         </div>
       </div>
       
