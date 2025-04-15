@@ -19,6 +19,7 @@ interface CustomSession extends Session {
 const allowedEmails: string[] = [
   // Add the email addresses of users who should have admin access
   // For example: "your.email@gmail.com"
+  "hey@queral.studio"
 ];
 
 export const authOptions: NextAuthOptions = {

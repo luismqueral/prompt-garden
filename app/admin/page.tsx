@@ -72,13 +72,8 @@ export default function AdminPage() {
       
       <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full">
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6">
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <div className="flex items-center">
-              <div className="text-sm text-gray-600 mr-4">
-                Signed in as: {session.user.email}
-              </div>
-            </div>
           </div>
           
           <div className="mb-8">

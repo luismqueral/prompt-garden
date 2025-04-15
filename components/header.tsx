@@ -53,25 +53,6 @@ export function Header({ onAddPromptClick, isCreateView = false }: HeaderProps) 
         </div>
       </div>
       <div className="flex space-x-4 items-center">
-        <div className="text-gray-600 hover:underline text-sm cursor-pointer" onClick={goToHome}>
-          Browse All Prompts
-        </div>
-        <Link 
-          href="/tips" 
-          className="text-gray-600 hover:underline text-sm"
-          onClick={(e) => {
-            if (isCreateView) {
-              e.preventDefault(); // Prevent default link behavior
-              // If we're in create view, ask for confirmation before navigating away
-              if (window.confirm('Are you sure you want to leave? Any unsaved changes will be lost.')) {
-                window.location.href = "/tips"; // Use direct navigation
-              }
-            }
-          }}
-        >
-          Prompting Tips
-        </Link>
-        
         {/* Admin dashboard link - only visible to admin users */}
         {session?.user?.isAdmin && (
           <Link 
@@ -84,15 +65,12 @@ export function Header({ onAddPromptClick, isCreateView = false }: HeaderProps) 
         
         {/* Authentication buttons */}
         {status === 'authenticated' ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">{session.user.email}</span>
-            <button
-              onClick={handleSignOut}
-              className="text-gray-600 hover:text-gray-800 text-sm"
-            >
-              Sign Out
-            </button>
-          </div>
+          <button
+            onClick={handleSignOut}
+            className="text-gray-600 hover:text-gray-800 text-sm"
+          >
+            Sign Out
+          </button>
         ) : status === 'unauthenticated' && (
           <button
             onClick={handleSignIn}
