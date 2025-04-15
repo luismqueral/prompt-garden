@@ -56,9 +56,18 @@ export default function PromptDetailPage() {
   const handleDeletePrompt = async () => {
     if (!prompt) return;
     
-    if (window.confirm('This would normally delete the prompt. For now, we\'ll just take you back to the home page.')) {
-      // Don't actually delete, just navigate back to the home page
-      router.push('/');
+    if (window.confirm('Are you sure you want to delete this prompt? This action cannot be undone.')) {
+      try {
+        setIsLoading(true);
+        await PromptService.deletePrompt(prompt.id);
+        
+        // Navigate back to home page after successful deletion
+        router.push('/');
+      } catch (error) {
+        console.error('Error deleting prompt:', error);
+        alert('Failed to delete prompt. Please try again.');
+        setIsLoading(false);
+      }
     }
   };
   

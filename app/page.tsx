@@ -90,6 +90,8 @@ export default function HomePage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRemixMode, setIsRemixMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editPromptId, setEditPromptId] = useState<string | null>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [blocks, setBlocks] = useState<Block[]>([
@@ -139,7 +141,7 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [prompts, isLoaded]);
 
-  // Effect for View Management and potential Fork Loading
+  // Effect for View Management and potential Fork/Edit Loading
   useEffect(() => {
     // Get the view parameter from the URL
     const viewParam = searchParams.get('view');
@@ -160,6 +162,14 @@ To create follow-up prompts that will display with circle indicators:
         console.log(`${isEditing ? 'Edit' : 'Fork'} request detected for prompt ID: ${promptId}`);
         setIsSubmitting(true); // Show loading state
         
+        // Set edit mode state if we're editing
+        setIsEditMode(isEditing);
+        if (isEditing) {
+          setEditPromptId(promptId);
+        } else {
+          setEditPromptId(null);
+        }
+        
         // Fetch the prompt data using the ID
         PromptService.getPromptById(promptId)
           .then(promptData => {
@@ -178,6 +188,8 @@ To create follow-up prompts that will display with circle indicators:
             
             // Reset to default if fetch fails
             setIsRemixMode(false);
+            setIsEditMode(false);
+            setEditPromptId(null);
             setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
             setTitleInput("");
             setSelectedTags([]);
@@ -195,6 +207,10 @@ To create follow-up prompts that will display with circle indicators:
           setSelectedTags([]);
           setSelectedCategory(null);
         }
+        
+        // Reset edit mode when creating a fresh prompt
+        setIsEditMode(false);
+        setEditPromptId(null);
       }
     } else {
       // Browse view
@@ -203,6 +219,12 @@ To create follow-up prompts that will display with circle indicators:
       // Reset remix mode if needed
       if (isRemixMode) {
         setIsRemixMode(false);
+      }
+      
+      // Reset edit mode as well
+      if (isEditMode) {
+        setIsEditMode(false);
+        setEditPromptId(null);
       }
       
       // Focus search input
@@ -313,7 +335,7 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [activeView]); // Run ONLY when activeView changes
 
-  // Modify the addNewPrompt function
+  // Modify the addNewPrompt function to handle both adding and updating
   const addNewPrompt = async () => {
     if (isSubmitting) return; // Prevent multiple submissions
     
@@ -348,19 +370,44 @@ To create follow-up prompts that will display with circle indicators:
         category: selectedCategory || undefined
       };
       
-      // Save to Google Sheets using the API
-      const createdPrompt = await PromptService.addPrompt(promptData);
+      let updatedPrompt: Prompt;
       
-      // Add to local state for immediate UI update
-      setPrompts([...prompts, {
-        id: createdPrompt.id,
-        title: createdPrompt.title,
-        content: createdPrompt.content,
-        tags: createdPrompt.tags,
-        category: createdPrompt.category,
-        createdAt: createdPrompt.createdAt,
-        updatedAt: createdPrompt.updatedAt
-      }]);
+      if (isEditMode && editPromptId) {
+        // Update existing prompt
+        console.log(`Updating prompt with ID: ${editPromptId}`);
+        updatedPrompt = await PromptService.updatePrompt(editPromptId, promptData);
+        
+        // Update the prompt in local state too
+        setPrompts(prev => prev.map(p => 
+          p.id === editPromptId 
+            ? { 
+                ...p, 
+                title: updatedPrompt.title, 
+                content: updatedPrompt.content,
+                tags: updatedPrompt.tags,
+                category: updatedPrompt.category,
+                updatedAt: updatedPrompt.updatedAt 
+              } 
+            : p
+        ));
+        
+        // Show success message
+        alert('Prompt updated successfully!');
+      } else {
+        // Save to Google Sheets using the API as a new prompt
+        updatedPrompt = await PromptService.addPrompt(promptData);
+        
+        // Add to local state for immediate UI update
+        setPrompts([...prompts, {
+          id: updatedPrompt.id,
+          title: updatedPrompt.title,
+          content: updatedPrompt.content,
+          tags: updatedPrompt.tags,
+          category: updatedPrompt.category,
+          createdAt: updatedPrompt.createdAt,
+          updatedAt: updatedPrompt.updatedAt
+        }]);
+      }
       
       // Reset form
       setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: '' }]);
@@ -368,12 +415,14 @@ To create follow-up prompts that will display with circle indicators:
       setSelectedTags([]);
       setSelectedCategory(null);
       setIsRemixMode(false);
+      setIsEditMode(false);
+      setEditPromptId(null);
       
       // Switch to browse view
       router.push('/');
     } catch (error) {
-      console.error('Error creating prompt:', error);
-      alert('Failed to create prompt. Please try again.');
+      console.error('Error saving prompt:', error);
+      alert(`Failed to ${isEditMode ? 'update' : 'create'} prompt. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -1139,7 +1188,7 @@ To create follow-up prompts that will display with circle indicators:
               <div className="px-6 py-4 flex-1 mx-auto max-w-3xl w-full">
                 {/* Title above content area */}
                 <h1 className="text-2xl font-bold mb-2 text-center">
-                  {isRemixMode ? "Fork Prompt" : "Add New Prompt"}
+                  {isEditMode ? "Edit Prompt" : isRemixMode ? "Fork Prompt" : "Add New Prompt"}
                 </h1>
                 {isRemixMode && searchParams.get('forkId') && (
                   <p className="text-center text-gray-500 text-sm mb-6">
@@ -1382,7 +1431,9 @@ To create follow-up prompts that will display with circle indicators:
                       >
                         {isSubmitting 
                           ? "Saving..." 
-                          : "Add New Prompt"}
+                          : isEditMode
+                            ? "Update Prompt"
+                            : "Add New Prompt"}
                       </Button>
                       <div className="text-xs text-gray-400 mt-2">
                         Press <kbd className="px-1 py-0.5 bg-gray-100 rounded border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded border">Enter</kbd> to submit
