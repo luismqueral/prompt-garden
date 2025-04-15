@@ -26,12 +26,13 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { PromptService } from "@/lib/api/promptService";
+import { CursorRuleService } from "@/lib/api/cursorRuleService";
 import { Prompt as GoogleSheetsPrompt } from "@/lib/googleSheets";
 import { TitleGeneratorService } from "@/lib/api/titleGeneratorService";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 // Add Material Design icons
-import { MdSearch, MdClose, MdContentCopy, MdCheck, MdAutoFixHigh } from "react-icons/md";
+import { MdSearch, MdClose, MdContentCopy, MdCheck, MdAutoFixHigh, MdMoreVert, MdOutlineRule } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { BlockEditor, Block } from '@/components/ui/block-editor';
 import { blocksToContent, contentToBlocks } from '@/lib/utils/blockUtils';
+import { CursorRuleModal } from '@/components/cursor-rule-modal';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 /**
  * Prompt Type Definition
@@ -100,6 +108,11 @@ export default function HomePage() {
   const [titleInput, setTitleInput] = useState("");
   const [titleGenerating, setTitleGenerating] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
+  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+  const [activeMenuPromptId, setActiveMenuPromptId] = useState<string | null>(null);
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
+  const [selectedPromptText, setSelectedPromptText] = useState<string>('');
+  const [selectedPromptTitle, setSelectedPromptTitle] = useState<string>('');
 
   // Define the tutorial placeholder text
   const placeholderText = `# How to Create a Prompt
@@ -889,68 +902,19 @@ To create follow-up prompts that will display with circle indicators:
     const category = getCategoryForPrompt(prompt);
     
     // Function to handle copying prompt to clipboard
-    const handleCopyPrompt = (e: React.MouseEvent) => {
-      e.preventDefault();
-      
-      // Get the target element safely
-      const targetDiv = e.currentTarget as HTMLElement;
-      if (!targetDiv) {
-        console.error('Target element not found');
-        return;
+    const handleCopyPrompt = (e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
       }
       
       // Copy the prompt content to clipboard, stripping context tags
       navigator.clipboard.writeText(stripSpecialTags(prompt.content))
         .then(() => {
-          try {
-            // Show a small icon notification in the top right corner
-            const notificationEl = document.createElement('div');
-            notificationEl.className = 'absolute top-2 right-2 bg-green-500 text-white rounded-full p-1 z-10 opacity-0 transition-opacity';
-            notificationEl.style.display = 'flex';
-            notificationEl.style.alignItems = 'center';
-            notificationEl.style.justifyContent = 'center';
-            notificationEl.style.width = '24px';
-            notificationEl.style.height = '24px';
-            
-            // Use React to render the icon
-            const iconContainer = document.createElement('div');
-            // This is a workaround as we can't directly render React components here
-            // Create an SVG that matches the MdCheck icon
-            iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
-            </svg>`;
-            notificationEl.appendChild(iconContainer.firstChild!);
-            
-            // Ensure position is relative before appending
-            if (targetDiv) {
-              // Get the content div (which is the first div child of targetDiv)
-              const contentDiv = targetDiv.querySelector('div');
-              if (contentDiv) {
-                if (getComputedStyle(contentDiv).position === 'static') {
-                  contentDiv.style.position = 'relative';
-                }
-                contentDiv.appendChild(notificationEl);
-                
-                // Add fade-in effect
-                setTimeout(() => {
-                  notificationEl.style.opacity = '1';
-                  notificationEl.style.transition = 'opacity 0.2s ease-in-out';
-                }, 10);
-                
-                // Remove the notification after a delay with fade-out
-                setTimeout(() => {
-                  notificationEl.style.opacity = '0';
-                  setTimeout(() => {
-                    if (contentDiv && contentDiv.contains(notificationEl)) {
-                      contentDiv.removeChild(notificationEl);
-                    }
-                  }, 200); // Wait for fade out animation
-                }, 1500);
-              }
-            }
-          } catch (err) {
-            console.error('Error showing notification:', err);
-          }
+          // Set the copied state for this prompt
+          setCopiedPromptId(prompt.id);
+          // Clear the copied state after 2 seconds
+          setTimeout(() => setCopiedPromptId(null), 2000);
         })
         .catch(err => {
           console.error('Failed to copy text: ', err);
@@ -970,21 +934,72 @@ To create follow-up prompts that will display with circle indicators:
         )}
         
         <div 
-          className="block group cursor-pointer"
-          onClick={handleCopyPrompt}
+          className="block group relative"
         >
           <div 
-            className="bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap group-hover:bg-gray-100 transition-colors line-clamp-6 max-h-60 overflow-hidden border relative" 
+            className={`bg-white p-4 rounded-md mb-3 font-mono whitespace-pre-wrap transition-colors line-clamp-6 max-h-60 overflow-hidden border relative cursor-pointer ${
+              activeMenuPromptId === prompt.id ? 'bg-gray-100' : 'hover:bg-gray-100'
+            }`}
             style={{ 
               fontFamily: 'Menlo, Monaco, "Courier New", monospace',
               fontSize: '0.875rem'
             }}
+            onClick={handleCopyPrompt}
           >
             {stripSpecialTags(prompt.content)}
-            <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MdContentCopy 
-                className="h-4 w-4"
-              />
+            <div className={`absolute top-2 right-2 text-gray-400 ${activeMenuPromptId === prompt.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity flex space-x-2`}>
+              {/* Copy button - shows check when copied, copy icon when not */}
+              <button 
+                className={`p-1 rounded-full focus:outline-none transition-colors ${
+                  copiedPromptId === prompt.id 
+                    ? 'bg-green-100 text-green-600' 
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyPrompt();
+                }}
+                aria-label={copiedPromptId === prompt.id ? "Copied" : "Copy to clipboard"}
+              >
+                {copiedPromptId === prompt.id ? (
+                  <MdCheck className="h-4 w-4" />
+                ) : (
+                  <MdContentCopy className="h-4 w-4" />
+                )}
+              </button>
+
+              {/* Kebab menu - always visible */}
+              <DropdownMenu onOpenChange={(open) => {
+                if (open) {
+                  setActiveMenuPromptId(prompt.id);
+                } else if (activeMenuPromptId === prompt.id) {
+                  setActiveMenuPromptId(null);
+                }
+              }}>
+                <DropdownMenuTrigger asChild 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button 
+                    className={`p-1 rounded-full ${activeMenuPromptId === prompt.id ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} focus:outline-none transition-colors`}
+                    aria-label="Menu"
+                  >
+                    <MdMoreVert className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMenuPromptId(null);
+                      addAsCursorRule(stripSpecialTags(prompt.content), prompt.title);
+                    }}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <MdOutlineRule className="h-4 w-4" />
+                    <span>Add as Cursor Rule</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -1094,6 +1109,23 @@ To create follow-up prompts that will display with circle indicators:
         ))}
       </div>
     );
+  };
+
+  // Handle adding prompt as cursor rule
+  const addAsCursorRule = async (promptText: string, promptTitle?: string) => {
+    try {
+      // Set the selected prompt details for the modal
+      setSelectedPromptText(promptText);
+      if (promptTitle) {
+        setSelectedPromptTitle(promptTitle);
+      }
+      // Open the modal
+      setIsRuleModalOpen(true);
+      // Call the service (which now just resolves immediately)
+      await CursorRuleService.addPromptAsCursorRule(promptText);
+    } catch (error) {
+      console.error('Error adding as cursor rule:', error);
+    }
   };
 
   return (
@@ -1480,6 +1512,14 @@ To create follow-up prompts that will display with circle indicators:
           color: #8B5CF6 !important;
         }
       `}</style>
+      
+      {/* Add the CursorRuleModal component */}
+      <CursorRuleModal 
+        isOpen={isRuleModalOpen}
+        onClose={() => setIsRuleModalOpen(false)}
+        promptText={selectedPromptText}
+        promptTitle={selectedPromptTitle}
+      />
     </div>
   );
 }

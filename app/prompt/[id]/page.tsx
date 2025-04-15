@@ -4,11 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { PromptService } from '@/lib/api/promptService';
+import { CursorRuleService } from '@/lib/api/cursorRuleService';
 import { Prompt } from '@/lib/googleSheets';
-import { MdContentCopy, MdCheck, MdEdit, MdDelete, MdAltRoute } from 'react-icons/md';
+import { MdContentCopy, MdCheck, MdEdit, MdDelete, MdAltRoute, MdMoreVert, MdOutlineRule } from 'react-icons/md';
 import { contentToBlocks } from '@/lib/utils/blockUtils';
 import { Block } from '@/components/ui/block-editor';
 import ReactMarkdown from 'react-markdown';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { CursorRuleModal } from '@/components/cursor-rule-modal';
 
 export default function PromptDetailPage() {
   const params = useParams();
@@ -21,6 +29,10 @@ export default function PromptDetailPage() {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [promptBlocks, setPromptBlocks] = useState<Block[]>([]);
   const [isForkLoading, setIsForkLoading] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
+  const [selectedPromptText, setSelectedPromptText] = useState<string>('');
+  const [activeMenuIndex, setActiveMenuIndex] = useState<number | null>(null);
   
   // Load prompt on component mount
   useEffect(() => {
@@ -46,10 +58,33 @@ export default function PromptDetailPage() {
   }, [promptId]);
   
   // Handle copying content to clipboard
-  const copyToClipboard = (text: string, id: string) => {
+  const copyToClipboard = (text: string, id: string, e?: React.MouseEvent) => {
+    // If event is provided, prevent parent click handlers
+    if (e) {
+      e.stopPropagation();
+    }
     navigator.clipboard.writeText(text);
     setCopiedText(id);
     setTimeout(() => setCopiedText(null), 2000);
+  };
+  
+  // Handle adding prompt as cursor rule
+  const addAsCursorRule = async (text: string) => {
+    try {
+      // Set the selected prompt text for the modal
+      setSelectedPromptText(text);
+      // Open the modal
+      setIsRuleModalOpen(true);
+      // Call the service (which now just resolves immediately)
+      await CursorRuleService.addPromptAsCursorRule(text);
+    } catch (error) {
+      console.error('Error adding as cursor rule:', error);
+      setNotification({
+        message: 'Failed to add prompt as cursor rule. Please try again.',
+        type: 'error'
+      });
+      setTimeout(() => setNotification(null), 5000);
+    }
   };
   
   // Handle delete prompt
@@ -164,6 +199,38 @@ export default function PromptDetailPage() {
       <Header />
       
       <div className="max-w-3xl mx-auto p-6">
+        {notification && (
+          <div className={`fixed bottom-4 right-4 p-4 rounded-md shadow-lg max-w-md z-50 transition-opacity duration-300 
+            ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <div className="flex items-center space-x-2">
+              {notification.type === 'success' ? (
+                <MdCheck className="h-5 w-5" />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              )}
+              <p>{notification.message}</p>
+            </div>
+            <button 
+              className="absolute top-1 right-1 text-gray-500 hover:text-gray-700"
+              onClick={() => setNotification(null)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        
+        {/* Add the CursorRuleModal component */}
+        <CursorRuleModal 
+          isOpen={isRuleModalOpen}
+          onClose={() => setIsRuleModalOpen(false)}
+          promptText={selectedPromptText}
+          promptTitle={prompt?.title}
+        />
+        
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{prompt.title}</h1>
           
@@ -200,20 +267,69 @@ export default function PromptDetailPage() {
                   </div>
                 ) : (
                   <div 
-                    className="group p-4 font-mono whitespace-pre-wrap hover:bg-gray-100 transition-colors relative cursor-pointer" 
+                    className={`group p-4 font-mono whitespace-pre-wrap transition-colors relative cursor-pointer ${
+                      activeMenuIndex === index ? 'bg-gray-100' : 'hover:bg-gray-100'
+                    }`} 
                     style={{ 
                       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
                       fontSize: '0.875rem'
                     }}
-                    onClick={() => copyToClipboard(block.content, `block-${index}`)}
+                    onClick={(e) => copyToClipboard(block.content, `block-${index}`, e)}
                   >
                     <ReactMarkdown>{block.content}</ReactMarkdown>
-                    <div className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {copiedText === `block-${index}` ? (
-                        <MdCheck className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <MdContentCopy className="h-4 w-4" />
-                      )}
+                    <div className={`absolute top-2 right-2 text-gray-400 ${activeMenuIndex === index ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity flex space-x-2`}>
+                      {/* Copy button - shows check when copied, copy icon when not */}
+                      <button 
+                        className={`p-1 rounded-full focus:outline-none transition-colors ${
+                          copiedText === `block-${index}` 
+                            ? 'bg-green-100 text-green-600' 
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(block.content, `block-${index}`);
+                        }}
+                        aria-label={copiedText === `block-${index}` ? "Copied" : "Copy to clipboard"}
+                      >
+                        {copiedText === `block-${index}` ? (
+                          <MdCheck className="h-4 w-4" />
+                        ) : (
+                          <MdContentCopy className="h-4 w-4" />
+                        )}
+                      </button>
+
+                      {/* Kebab menu - always visible */}
+                      <DropdownMenu onOpenChange={(open) => {
+                        if (open) {
+                          setActiveMenuIndex(index);
+                        } else if (activeMenuIndex === index) {
+                          setActiveMenuIndex(null);
+                        }
+                      }}>
+                        <DropdownMenuTrigger asChild 
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button 
+                            className={`p-1 rounded-full ${activeMenuIndex === index ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} focus:outline-none transition-colors`}
+                            aria-label="Menu"
+                          >
+                            <MdMoreVert className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuIndex(null);
+                              addAsCursorRule(block.content);
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <MdOutlineRule className="h-4 w-4" />
+                            <span>Add as Cursor Rule</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 )}
