@@ -144,28 +144,36 @@ To create follow-up prompts that will display with circle indicators:
     const shouldFocusTitle = sessionStorage.getItem("focusAndSelectTitle");
     const shouldFocusContent = sessionStorage.getItem("focusAndSelectContent");
     
+    console.log("Checking for remix data in sessionStorage:", {
+      hasContent: !!remixContent,
+      hasTitle: !!remixTitle,
+      hasTagsJson: !!remixTagsJson
+    });
+    
     if (remixContent) {
-      setNewPromptContent(remixContent);
+      console.log("Found remixContent, initializing remix mode");
       setIsRemixMode(true);
       
+      // Convert content to blocks for the block editor
+      const remixBlocks = contentToBlocks(remixContent);
+      console.log("Converted content to blocks:", remixBlocks);
+      setBlocks(remixBlocks);
+      
       if (remixTitle) {
-        setNewPromptTitle(remixTitle);
+        console.log("Setting title input:", remixTitle);
+        setTitleInput(remixTitle);
       }
       
       // Set tags if they exist
       if (remixTagsJson) {
         try {
           const remixTags = JSON.parse(remixTagsJson);
+          console.log("Setting tags:", remixTags);
           setSelectedTags(remixTags);
         } catch (e) {
           console.error("Error parsing remix tags:", e);
         }
       }
-      
-      // Clear the session storage after using it
-      sessionStorage.removeItem("remixPromptContent");
-      sessionStorage.removeItem("remixPromptTitle");
-      sessionStorage.removeItem("remixPromptTags");
       
       // Focus on the title input if the flag is set
       if (shouldFocusTitle) {
@@ -189,6 +197,15 @@ To create follow-up prompts that will display with circle indicators:
           sessionStorage.removeItem("focusAndSelectContent");
         }, 100);
       }
+      
+      // Clear the remix data from session storage after a short delay
+      // to ensure all state updates have been processed
+      setTimeout(() => {
+        console.log("Clearing sessionStorage after processing data");
+        sessionStorage.removeItem("remixPromptContent");
+        sessionStorage.removeItem("remixPromptTitle");
+        sessionStorage.removeItem("remixPromptTags");
+      }, 500);
     }
   }, []);
 
@@ -282,9 +299,10 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [activeView]);
 
-  // Reset blocks when switching to create view
+  // Reset blocks when switching to create view (but don't reset if we're in remix mode)
   useEffect(() => {
-    if (activeView === "create") {
+    // Skip this reset if we're in remix mode (data from sessionStorage)
+    if (activeView === "create" && !isRemixMode) {
       setBlocks([
         { id: `block-${Date.now()}`, type: 'prompt', content: '' }
       ]);
@@ -292,7 +310,7 @@ To create follow-up prompts that will display with circle indicators:
       setSelectedTags([]);
       setSelectedCategory(null);
     }
-  }, [activeView]);
+  }, [activeView, isRemixMode]);
 
   // Modify the addNewPrompt function
   const addNewPrompt = async () => {

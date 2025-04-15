@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { PromptService } from '@/lib/api/promptService';
 import { Prompt } from '@/lib/googleSheets';
-import { MdContentCopy, MdCheck, MdEdit, MdDelete } from 'react-icons/md';
+import { MdContentCopy, MdCheck, MdEdit, MdDelete, MdMergeType } from 'react-icons/md';
 import { contentToBlocks } from '@/lib/utils/blockUtils';
 import { Block } from '@/components/ui/block-editor';
 import ReactMarkdown from 'react-markdown';
@@ -65,6 +65,39 @@ export default function PromptDetailPage() {
   const handleEditPrompt = () => {
     if (!prompt) return;
     router.push(`/prompt/${prompt.id}/edit`);
+  };
+  
+  // Handle fork prompt
+  const handleForkPrompt = () => {
+    if (!prompt) return;
+    
+    // Add animation effect on click
+    const button = document.getElementById('fork-prompt-btn');
+    if (button) {
+      button.classList.add('clicked');
+      setTimeout(() => {
+        button.classList.remove('clicked');
+      }, 300);
+    }
+    
+    console.log("Forking prompt:", prompt.title);
+    console.log("Content to be stored:", prompt.content);
+    console.log("Tags to be stored:", prompt.tags || []);
+    
+    // Store prompt data in sessionStorage for the Add Prompt page
+    sessionStorage.setItem("remixPromptContent", prompt.content);
+    sessionStorage.setItem("remixPromptTitle", prompt.title);
+    sessionStorage.setItem("remixPromptTags", JSON.stringify(prompt.tags || []));
+    
+    // Verify it's been stored
+    console.log("Stored in sessionStorage:", {
+      content: sessionStorage.getItem("remixPromptContent")?.slice(0, 50) + "...",
+      title: sessionStorage.getItem("remixPromptTitle"),
+      tags: sessionStorage.getItem("remixPromptTags")
+    });
+    
+    // Navigate to the Add Prompt page
+    router.push("/?view=create");
   };
   
   if (isLoading) {
@@ -136,7 +169,7 @@ export default function PromptDetailPage() {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 relative">
           {/* Render blocks */}
           <div className="space-y-4">
             {promptBlocks.map((block, index) => (
@@ -168,6 +201,17 @@ export default function PromptDetailPage() {
             ))}
           </div>
           
+          {/* Fork prompt button */}
+          <button
+            onClick={handleForkPrompt}
+            id="fork-prompt-btn"
+            className="absolute bottom-4 right-4 px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner"
+            aria-label="Fork this prompt"
+          >
+            <MdMergeType className="fork-icon text-gray-500" size={16} />
+            fork prompt
+          </button>
+
           {/* Tags and category */}
           <div className="mt-6 pt-4 border-t border-gray-100">
             <div className="flex flex-wrap gap-1 justify-start">
@@ -218,6 +262,37 @@ export default function PromptDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* Global styles for fork button animation */}
+      <style jsx global>{`
+        @keyframes wiggle {
+          0% { transform: translateY(0) rotate(0); }
+          25% { transform: translateY(2px) rotate(-3deg); }
+          50% { transform: translateY(1px) rotate(0); }
+          75% { transform: translateY(1px) rotate(3deg); }
+          100% { transform: translateY(0) rotate(0); }
+        }
+        
+        #fork-prompt-btn.clicked {
+          animation: wiggle 0.3s ease;
+          background-color: #f0f0f0;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .fork-icon {
+          transition: all 0.2s ease;
+        }
+        
+        #fork-prompt-btn:hover .fork-icon {
+          transform: rotate(15deg);
+          color: #8B5CF6 !important;
+        }
+        
+        #fork-prompt-btn.clicked .fork-icon {
+          transform: rotate(-15deg) scale(1.2);
+          color: #8B5CF6 !important;
+        }
+      `}</style>
     </div>
   );
 } 
