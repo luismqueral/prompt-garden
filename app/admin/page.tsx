@@ -1,14 +1,31 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Header } from '@/components/header';
 import { PromptService } from '@/lib/api/promptService';
 
 export default function AdminPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [isInitializing, setIsInitializing] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Check authentication status
+  useEffect(() => {
+    if (status === 'loading') return; // Still loading auth status
+    
+    if (status === 'unauthenticated') {
+      // Redirect to sign-in page if not authenticated
+      router.push('/auth/signin');
+      return;
+    } else if (session && !session.user?.isAdmin) {
+      // Redirect to error page if authenticated but not an admin
+      router.push('/auth/error?error=AccessDenied');
+      return;
+    }
+  }, [status, session, router]);
 
   // Initialize the Google Sheets database
   const initializeDatabase = async () => {
@@ -33,13 +50,36 @@ export default function AdminPage() {
     }
   };
 
+  // If still loading auth or not authenticated, show loading state
+  if (status === 'loading' || status === 'unauthenticated' || !session?.user?.isAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-100">
+        <Header isCreateView={false} />
+        
+        <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading admin dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <Header isCreateView={false} />
       
       <div className="px-6 py-8 flex-1 mx-auto max-w-2xl w-full">
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            <div className="flex items-center">
+              <div className="text-sm text-gray-600 mr-4">
+                Signed in as: {session.user.email}
+              </div>
+            </div>
+          </div>
           
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Google Sheets Database</h2>
@@ -73,6 +113,8 @@ export default function AdminPage() {
               <li><code className="bg-gray-100 px-1 py-0.5 rounded">GOOGLE_SHEET_ID</code> - The ID of your Google Sheet</li>
               <li><code className="bg-gray-100 px-1 py-0.5 rounded">GOOGLE_SERVICE_ACCOUNT_EMAIL</code> - Your Google Service Account email</li>
               <li><code className="bg-gray-100 px-1 py-0.5 rounded">GOOGLE_PRIVATE_KEY</code> - Your Google Service Account private key</li>
+              <li><code className="bg-gray-100 px-1 py-0.5 rounded">GOOGLE_CLIENT_ID</code> - Your Google OAuth Client ID</li>
+              <li><code className="bg-gray-100 px-1 py-0.5 rounded">GOOGLE_CLIENT_SECRET</code> - Your Google OAuth Client Secret</li>
             </ul>
             
             <p className="text-gray-600">
