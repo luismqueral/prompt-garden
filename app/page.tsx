@@ -154,6 +154,10 @@ To create follow-up prompts that will display with circle indicators:
       console.log("Found remixContent, initializing remix mode");
       setIsRemixMode(true);
       
+      // Explicitly set the active view to create
+      console.log("Explicitly setting activeView to 'create'");
+      setActiveView('create');
+      
       // Convert content to blocks for the block editor
       const remixBlocks = contentToBlocks(remixContent);
       console.log("Converted content to blocks:", remixBlocks);
@@ -251,9 +255,13 @@ To create follow-up prompts that will display with circle indicators:
         const searchParams = new URLSearchParams(window.location.search);
         const viewParam = searchParams.get('view');
         
+        console.log("URL params changed - view param:", viewParam);
+        
         if (viewParam === 'create') {
+          console.log("Setting view to create");
           setActiveView('create');
         } else {
+          console.log("Setting view to browse");
           setActiveView('browse');
         }
       }
@@ -264,10 +272,23 @@ To create follow-up prompts that will display with circle indicators:
     // Also listen for popstate events (browser back/forward)
     window.addEventListener('popstate', handleURLParams);
     
+    // Add event listener for URL changes
+    const checkURLInterval = setInterval(() => {
+      const currentParams = new URLSearchParams(window.location.search);
+      const viewParam = currentParams.get('view');
+      
+      // If URL has view=create but activeView is not 'create', update it
+      if (viewParam === 'create' && activeView !== 'create') {
+        console.log("URL has view=create but activeView is not 'create', updating view");
+        setActiveView('create');
+      }
+    }, 100);
+    
     return () => {
       window.removeEventListener('popstate', handleURLParams);
+      clearInterval(checkURLInterval);
     };
-  }, []);
+  }, [activeView]);
   
   // Update URL when activeView changes
   useEffect(() => {

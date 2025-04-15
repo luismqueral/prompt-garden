@@ -96,8 +96,11 @@ export default function PromptDetailPage() {
       tags: sessionStorage.getItem("remixPromptTags")
     });
     
-    // Navigate to the Add Prompt page
-    router.push("/?view=create");
+    // Add a small delay before redirecting to ensure sessionStorage is set
+    setTimeout(() => {
+      // Force full page reload through direct URL change
+      window.location.href = "/?view=create";
+    }, 100);
   };
   
   if (isLoading) {
