@@ -32,18 +32,13 @@ export function PromptBlock({ id, content, onChange, onDelete }: PromptBlockProp
     setLocalContent(content);
   }, [content]);
   
-  // Focus the textarea when the component mounts with empty content
+  // Focus the textarea when the component mounts
   useEffect(() => {
     if (textareaRef.current) {
-      // Always focus the textarea
+      // Just focus the textarea on mount
       textareaRef.current.focus();
-      
-      // If there's content (like from a snippet), select it all
-      if (content) {
-        textareaRef.current.select();
-      }
     }
-  }, [content]);
+  }, []); // Only run on mount
   
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
