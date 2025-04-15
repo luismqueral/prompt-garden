@@ -89,12 +89,12 @@ export default function HomePage() {
   const [isRemixMode, setIsRemixMode] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [blocks, setBlocks] = useState<Block[]>([
     { id: `block-${Date.now()}`, type: 'prompt', content: '' }
   ]);
   const [titleInput, setTitleInput] = useState("");
+  const [titleGenerating, setTitleGenerating] = useState(false);
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   // Define the tutorial placeholder text
   const placeholderText = `# How to Create a Prompt
@@ -299,6 +299,7 @@ To create follow-up prompts that will display with circle indicators:
     if (isSubmitting) return; // Prevent multiple submissions
     
     setIsSubmitting(true);
+    setTitleError(null); // Clear any title generation errors
     
     try {
       // Convert blocks to content string
@@ -1141,16 +1142,24 @@ To create follow-up prompts that will display with circle indicators:
                           onChange={(e) => setTitleInput(e.target.value)}
                         />
                       </div>
+                      {titleError && (
+                        <p className="mt-1 text-sm text-red-500">{titleError}</p>
+                      )}
                       <div className="mt-2 flex justify-end">
                         <button
                           onClick={async () => {
                             const content = blocksToContent(blocks);
                             if (!content.trim()) {
-                              setSuccessMessage("Please add content to your prompt first");
-                              setShowSuccess(true);
-                              setTimeout(() => setShowSuccess(false), 3000);
+                              setTitleError("Please add content to your prompt first");
+                              setTimeout(() => setTitleError(null), 3000);
                               return;
                             }
+                            
+                            // Clear any previous errors
+                            setTitleError(null);
+                            
+                            // Set loading state
+                            setTitleGenerating(true);
                             
                             // Add animation effect on click
                             const button = document.getElementById('generate-title-btn');
@@ -1162,23 +1171,30 @@ To create follow-up prompts that will display with circle indicators:
                             }
                             
                             try {
-                              setSuccessMessage("Generating title...");
-                              setShowSuccess(true);
                               const title = await TitleGeneratorService.generateTitle(content);
                               setTitleInput(title);
-                              setSuccessMessage(`Generated title: "${title}"`);
-                              setTimeout(() => setShowSuccess(false), 2000);
                             } catch (error) {
                               console.error("Error generating title:", error);
-                              setSuccessMessage("Failed to generate title. Please try again.");
-                              setTimeout(() => setShowSuccess(false), 3000);
+                              setTitleError("Failed to generate title. Please try again.");
+                            } finally {
+                              setTitleGenerating(false);
                             }
                           }}
                           id="generate-title-btn"
-                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner"
+                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={titleGenerating}
                         >
-                          <MdAutoFixHigh className="wand-icon text-gray-500" size={16} />
-                          Generate Title
+                          {titleGenerating ? (
+                            <>
+                              <span className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full mr-1"></span>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <MdAutoFixHigh className="wand-icon text-gray-500" size={16} />
+                              Generate Title
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1357,11 +1373,6 @@ To create follow-up prompts that will display with circle indicators:
           )}
         </div>
       </div>
-      {showSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-50 animate-fadeIn">
-          {successMessage}
-        </div>
-      )}
       
       {/* Global styles */}
       <style jsx global>{`
