@@ -160,8 +160,9 @@ To create follow-up prompts that will display with circle indicators:
     const viewParam = searchParams.get('view');
     const forkId = searchParams.get('forkId');
     const editId = searchParams.get('editId');
+    const snippetText = searchParams.get('snippetText');
     
-    console.log(`URL params - view: ${viewParam}, forkId: ${forkId}, editId: ${editId}`);
+    console.log(`URL params - view: ${viewParam}, forkId: ${forkId}, editId: ${editId}, snippetText: ${snippetText ? 'present' : 'not present'}`);
     
     if (viewParam === 'create') {
       // Set the view state immediately
@@ -211,6 +212,27 @@ To create follow-up prompts that will display with circle indicators:
           .finally(() => {
             setIsSubmitting(false); // Hide loading state
           });
+      } else if (snippetText) {
+        // Handle snippetText parameter - prefill the editor with the snippet
+        console.log("Snippet text found in URL, prefilling editor");
+        
+        try {
+          const decodedSnippet = decodeURIComponent(snippetText);
+          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: decodedSnippet }]);
+          setTitleInput(""); // Leave title empty for user to fill
+          setSelectedTags([]);
+          setSelectedCategory(null);
+          setIsRemixMode(true); // Consider this a remix operation
+          setIsEditMode(false);
+          setEditPromptId(null);
+          setIsSubmitting(false);
+        } catch (error) {
+          console.error("Error decoding snippet text:", error);
+          // Fall back to default empty prompt
+          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+          setTitleInput("");
+          setIsSubmitting(false);
+        }
       } else {
         // No prompt ID - just set up a new prompt if needed
         if (!isRemixMode && (blocks.length === 0 || blocks[0]?.content === '')) {
