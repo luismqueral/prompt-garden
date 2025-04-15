@@ -138,57 +138,53 @@ To create follow-up prompts that will display with circle indicators:
     }
   }, [prompts, isLoaded]);
 
-  // Simplified Effect for View & Remix Management
+  // Effect for View Management and potential Fork Loading
   useEffect(() => {
-    // Get the "view" parameter from the URL
+    // Get the view parameter from the URL
     const viewParam = searchParams.get('view');
+    const forkId = searchParams.get('forkId');
     
-    // Check for "create" view
+    console.log(`URL params - view: ${viewParam}, forkId: ${forkId}`);
+    
     if (viewParam === 'create') {
-      console.log("VIEW: Create view requested");
-      
-      // Set the view state
+      // Set the view state immediately
       setActiveView('create');
       
-      // Check for remix data in sessionStorage
-      const remixContent = sessionStorage.getItem("remixPromptContent");
-      
-      if (remixContent) {
-        console.log("REMIX: Found content in sessionStorage. Length:", remixContent.length);
+      // Check if we're forking an existing prompt
+      if (forkId) {
+        console.log(`Fork request detected for prompt ID: ${forkId}`);
+        setIsSubmitting(true); // Show loading state
         
-        try {
-          // Get title and tags
-          const remixTitle = sessionStorage.getItem("remixPromptTitle") || "";
-          const remixTagsJson = sessionStorage.getItem("remixPromptTags");
-          const remixTags = remixTagsJson ? JSON.parse(remixTagsJson) : [];
-          
-          // Set all state at once for consistency
-          console.log("REMIX: Setting form state with remix data");
-          setIsRemixMode(true);
-          setBlocks(contentToBlocks(remixContent));
-          setTitleInput(remixTitle);
-          setSelectedTags(remixTags);
-          setSelectedCategory(null);
-          
-          // Clear sessionStorage after we've used the data
-          console.log("REMIX: Clearing sessionStorage");
-          sessionStorage.removeItem("remixPromptContent");
-          sessionStorage.removeItem("remixPromptTitle");
-          sessionStorage.removeItem("remixPromptTags");
-        } catch (error) {
-          console.error("Error processing remix data:", error);
-          // If there's an error, reset to defaults
-          setIsRemixMode(false);
-          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
-          setTitleInput("");
-          setSelectedTags([]);
-          setSelectedCategory(null);
-        }
+        // Fetch the prompt data using the ID
+        PromptService.getPromptById(forkId)
+          .then(promptData => {
+            console.log(`Successfully fetched prompt "${promptData.title}" for forking`);
+            
+            // Update state with the forked prompt data
+            setIsRemixMode(true);
+            setBlocks(contentToBlocks(promptData.content));
+            setTitleInput(promptData.title);
+            setSelectedTags(promptData.tags || []);
+            setSelectedCategory(promptData.category || null);
+          })
+          .catch(error => {
+            console.error("Error fetching prompt for fork:", error);
+            alert("Could not load the prompt to fork. Starting with an empty prompt instead.");
+            
+            // Reset to default if fetch fails
+            setIsRemixMode(false);
+            setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+            setTitleInput("");
+            setSelectedTags([]);
+            setSelectedCategory(null);
+          })
+          .finally(() => {
+            setIsSubmitting(false); // Hide loading state
+          });
       } else {
-        // No remix data, set up a new prompt
-        console.log("REMIX: No remix data found, setting up new prompt");
-        // Only reset if we're not already in remix mode
-        if (!isRemixMode) {
+        // No fork ID - just set up a new prompt if needed
+        if (!isRemixMode && (blocks.length === 0 || blocks[0]?.content === '')) {
+          console.log("Setting up new empty prompt");
           setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
           setTitleInput("");
           setSelectedTags([]);
@@ -197,10 +193,9 @@ To create follow-up prompts that will display with circle indicators:
       }
     } else {
       // Browse view
-      console.log("VIEW: Browse view active");
       setActiveView('browse');
       
-      // Ensure remix mode is off
+      // Reset remix mode if needed
       if (isRemixMode) {
         setIsRemixMode(false);
       }
@@ -210,7 +205,7 @@ To create follow-up prompts that will display with circle indicators:
         setTimeout(() => searchInputRef.current?.focus(), 100);
       }
     }
-  }, [searchParams]); // Only depend on URL parameters
+  }, [searchParams]); // Depend only on URL parameters
 
   // Focus search input when browse view becomes active
   useEffect(() => {
@@ -1138,9 +1133,17 @@ To create follow-up prompts that will display with circle indicators:
               {/* Content area - WIDER WIDTH */}
               <div className="px-6 py-4 flex-1 mx-auto max-w-3xl w-full">
                 {/* Title above content area */}
-                <h1 className="text-2xl font-bold mb-6 text-center">
-                  {isRemixMode ? "Remix Prompt" : "Add New Prompt"}
+                <h1 className="text-2xl font-bold mb-2 text-center">
+                  {isRemixMode ? "Fork Prompt" : "Add New Prompt"}
                 </h1>
+                {isRemixMode && searchParams.get('forkId') && (
+                  <p className="text-center text-gray-500 text-sm mb-6">
+                    Based on "{titleInput}"
+                  </p>
+                )}
+                {!isRemixMode && (
+                  <div className="mb-6"></div>
+                )}
                 
                 {/* White content area without border */}
                 <div className="bg-white rounded-lg p-6">
@@ -1374,9 +1377,7 @@ To create follow-up prompts that will display with circle indicators:
                       >
                         {isSubmitting 
                           ? "Saving..." 
-                          : isRemixMode 
-                            ? "Save Remix" 
-                            : "Add Prompt"}
+                          : "Add New Prompt"}
                       </Button>
                       <div className="text-xs text-gray-400 mt-2">
                         Press <kbd className="px-1 py-0.5 bg-gray-100 rounded border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-gray-100 rounded border">Enter</kbd> to submit

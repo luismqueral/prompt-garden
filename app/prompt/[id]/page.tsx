@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { PromptService } from '@/lib/api/promptService';
 import { Prompt } from '@/lib/googleSheets';
-import { MdContentCopy, MdCheck, MdEdit, MdDelete, MdMergeType } from 'react-icons/md';
+import { MdContentCopy, MdCheck, MdEdit, MdDelete, MdAltRoute } from 'react-icons/md';
 import { contentToBlocks } from '@/lib/utils/blockUtils';
 import { Block } from '@/components/ui/block-editor';
 import ReactMarkdown from 'react-markdown';
@@ -20,6 +20,7 @@ export default function PromptDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [promptBlocks, setPromptBlocks] = useState<Block[]>([]);
+  const [isForkLoading, setIsForkLoading] = useState(false);
   
   // Load prompt on component mount
   useEffect(() => {
@@ -85,40 +86,22 @@ export default function PromptDetailPage() {
     }
     
     try {
-      // Store data in sessionStorage
-      console.log(`FORK: Storing prompt "${prompt.title}" content (${prompt.content.length} chars)`);
+      // Set loading state
+      setIsForkLoading(true);
       
-      // Clear any existing data first
-      sessionStorage.removeItem("remixPromptContent");
-      sessionStorage.removeItem("remixPromptTitle");
-      sessionStorage.removeItem("remixPromptTags");
+      // Instead of storing in sessionStorage, pass the prompt ID directly in the URL
+      console.log(`FORK: Redirecting to fork prompt "${prompt.title}" with ID ${prompt.id}`);
       
-      // Set the data
-      sessionStorage.setItem("remixPromptContent", prompt.content);
-      sessionStorage.setItem("remixPromptTitle", prompt.title);
-      sessionStorage.setItem("remixPromptTags", JSON.stringify(prompt.tags || []));
-      
-      // Verify storage worked
-      const contentCheck = sessionStorage.getItem("remixPromptContent");
-      if (!contentCheck) {
-        throw new Error("Failed to store content in sessionStorage");
-      }
-      
-      console.log("FORK: Storage verification successful, redirecting...");
-      
-      // Add timestamp to force fresh URL and prevent browser/Next.js caching
-      const timestamp = Date.now();
-      
-      // Do the navigation last, after all storage is confirmed
-      if (typeof window !== 'undefined') {
-        window.location.href = `/?view=create&t=${timestamp}`; // Use direct navigation
-      } else {
-        router.push(`/?view=create&t=${timestamp}`);
-      }
+      // Add a small delay to make it feel like it's doing something
+      setTimeout(() => {
+        // Navigate directly to the create page with forkId parameter
+        window.location.href = `/?view=create&forkId=${prompt.id}`;
+      }, 400); // Small delay to show loading state
       
     } catch (error) {
       console.error("FORK ERROR:", error);
       alert("There was a problem forking this prompt. Please try again.");
+      setIsForkLoading(false);
     }
   };
   
@@ -175,20 +158,26 @@ export default function PromptDetailPage() {
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{prompt.title}</h1>
           
-          <div className="flex space-x-4">
-            <button 
-              onClick={handleEditPrompt}
-              className="text-blue-600 hover:underline text-sm"
-            >
-              Edit
-            </button>
-            <button 
-              onClick={handleDeletePrompt}
-              className="text-red-600 hover:underline text-sm"
-            >
-              Delete
-            </button>
-          </div>
+          {/* Fork prompt button - moved here */}
+          <button
+            onClick={handleForkPrompt}
+            id="fork-prompt-btn"
+            className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner disabled:opacity-70 disabled:cursor-not-allowed"
+            aria-label="Fork this prompt"
+            disabled={isForkLoading}
+          >
+            {isForkLoading ? (
+              <>
+                <span className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full mr-1"></span>
+                Forking...
+              </>
+            ) : (
+              <>
+                <MdAltRoute className="fork-icon text-gray-500" size={16} />
+                fork prompt
+              </>
+            )}
+          </button>
         </div>
         
         <div className="bg-white rounded-lg shadow-sm p-6 relative">
@@ -223,56 +212,63 @@ export default function PromptDetailPage() {
             ))}
           </div>
           
-          {/* Fork prompt button */}
-          <button
-            onClick={handleForkPrompt}
-            id="fork-prompt-btn"
-            className="absolute bottom-4 right-4 px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner"
-            aria-label="Fork this prompt"
-          >
-            <MdMergeType className="fork-icon text-gray-500" size={16} />
-            fork prompt
-          </button>
-
           {/* Tags and category */}
           <div className="mt-6 pt-4 border-t border-gray-100">
-            <div className="flex flex-wrap gap-1 justify-start">
-              {category && (
-                <span 
-                  className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center"
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    strokeWidth={1.5} 
-                    stroke="currentColor" 
-                    className="w-3 h-3 mr-1"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
-                    />
-                  </svg>
-                  {category}
-                </span>
-              )}
-              
-              {tags.map((tag, index) => {
-                // Skip the tag if it's the same as the category to avoid duplication
-                if (tag === category) return null;
-                
-                return (
+            <div className="flex flex-wrap gap-1 justify-between items-center">
+              <div className="flex flex-wrap gap-1">
+                {category && (
                   <span 
-                    key={index} 
-                    className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center"
+                    className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center"
                   >
-                    <span className="mr-1 font-medium">#</span>
-                    {tag}
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      strokeWidth={1.5} 
+                      stroke="currentColor" 
+                      className="w-3 h-3 mr-1"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" 
+                      />
+                    </svg>
+                    {category}
                   </span>
-                );
-              })}
+                )}
+                
+                {tags.map((tag, index) => {
+                  // Skip the tag if it's the same as the category to avoid duplication
+                  if (tag === category) return null;
+                  
+                  return (
+                    <span 
+                      key={index} 
+                      className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center"
+                    >
+                      <span className="mr-1 font-medium">#</span>
+                      {tag}
+                    </span>
+                  );
+                })}
+              </div>
+              
+              {/* Edit/Delete buttons - moved here */}
+              <div className="flex space-x-4">
+                <button 
+                  onClick={handleEditPrompt}
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  Edit
+                </button>
+                <button 
+                  onClick={handleDeletePrompt}
+                  className="text-red-600 hover:underline text-sm"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
             
             <div className="text-gray-400 text-xs mt-2">
@@ -307,12 +303,10 @@ export default function PromptDetailPage() {
         
         #fork-prompt-btn:hover .fork-icon {
           transform: rotate(15deg);
-          color: #8B5CF6 !important;
         }
         
         #fork-prompt-btn.clicked .fork-icon {
           transform: rotate(-15deg) scale(1.2);
-          color: #8B5CF6 !important;
         }
       `}</style>
     </div>
