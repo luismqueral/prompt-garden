@@ -30,7 +30,7 @@ import { Prompt as GoogleSheetsPrompt } from "@/lib/googleSheets";
 import { TitleGeneratorService } from "@/lib/api/titleGeneratorService";
 
 // Add Material Design icons
-import { MdSearch, MdClose, MdContentCopy, MdCheck } from "react-icons/md";
+import { MdSearch, MdClose, MdContentCopy, MdCheck, MdAutoFixHigh } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -328,10 +328,6 @@ To create follow-up prompts that will display with circle indicators:
         category: selectedCategory || undefined
       };
       
-      // Update success message
-      setSuccessMessage("Saving prompt...");
-      setShowSuccess(true);
-      
       // Save to Google Sheets using the API
       const createdPrompt = await PromptService.addPrompt(promptData);
       
@@ -353,15 +349,8 @@ To create follow-up prompts that will display with circle indicators:
       setSelectedCategory(null);
       setIsRemixMode(false);
       
-      // Show success message or navigate to the prompt detail
-      setSuccessMessage(`Prompt "${createdPrompt.title}" saved successfully!`);
-      setShowSuccess(true);
-      setActiveView('browse'); // Switch to browse view
-      
-      // After 3 seconds, hide the success message
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
+      // Switch to browse view
+      setActiveView('browse');
     } catch (error) {
       console.error('Error creating prompt:', error);
       alert('Failed to create prompt. Please try again.');
@@ -1140,19 +1129,19 @@ To create follow-up prompts that will display with circle indicators:
                     <BlockEditor blocks={blocks} onChange={setBlocks} />
                     
                     {/* Title input field */}
-                    <div className="mt-6 mb-2">
-                      <label htmlFor="promptTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                        Prompt Title
-                      </label>
-                      <div className="flex">
+                    <div className="mt-6 mb-6">
+                      <p className="text-sm font-medium mb-2">Prompt Title</p>
+                      <div className="border rounded-md p-3 bg-white focus-within:ring-1 focus-within:ring-blue-500">
                         <input
                           type="text"
                           id="promptTitle"
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          className="bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm p-0 w-full placeholder-gray-400"
                           placeholder="Enter a title for your prompt"
                           value={titleInput}
                           onChange={(e) => setTitleInput(e.target.value)}
                         />
+                      </div>
+                      <div className="mt-2 flex justify-end">
                         <button
                           onClick={async () => {
                             const content = blocksToContent(blocks);
@@ -1161,6 +1150,15 @@ To create follow-up prompts that will display with circle indicators:
                               setShowSuccess(true);
                               setTimeout(() => setShowSuccess(false), 3000);
                               return;
+                            }
+                            
+                            // Add animation effect on click
+                            const button = document.getElementById('generate-title-btn');
+                            if (button) {
+                              button.classList.add('clicked');
+                              setTimeout(() => {
+                                button.classList.remove('clicked');
+                              }, 300);
                             }
                             
                             try {
@@ -1176,8 +1174,10 @@ To create follow-up prompts that will display with circle indicators:
                               setTimeout(() => setShowSuccess(false), 3000);
                             }
                           }}
-                          className="ml-2 inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                          id="generate-title-btn"
+                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-all flex items-center gap-1.5 active:translate-y-0.5 active:shadow-inner"
                         >
+                          <MdAutoFixHigh className="wand-icon text-gray-500" size={16} />
                           Generate Title
                         </button>
                       </div>
@@ -1186,7 +1186,7 @@ To create follow-up prompts that will display with circle indicators:
                     {/* Tags & Categories Input Section */}
                     <div className="mt-9 mb-6">
                       <p className="text-sm font-medium mb-2">Tags & Categories</p>
-                      <div className="border rounded-md p-2 flex flex-wrap gap-2 bg-white focus-within:ring-1 focus-within:ring-blue-500">
+                      <div className="border rounded-md p-3 flex flex-wrap gap-2 bg-white focus-within:ring-1 focus-within:ring-blue-500">
                         {/* Selected tags */}
                         {selectedTags.map((tag, index) => {
                           // Use category styling for category tags
@@ -1194,7 +1194,7 @@ To create follow-up prompts that will display with circle indicators:
                           return (
                             <div 
                               key={index}
-                              className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                              className={`px-2 py-1 rounded-full text-sm flex items-center ${
                                 isTagCategory 
                                   ? `${getColorForTag(tag).bg} ${getColorForTag(tag).text}`
                                   : "bg-gray-100 text-gray-600"
@@ -1232,7 +1232,7 @@ To create follow-up prompts that will display with circle indicators:
                         
                         {/* Category if selected */}
                         {selectedCategory && (
-                          <div className={`px-2 py-1 rounded-full text-xs flex items-center ${
+                          <div className={`px-2 py-1 rounded-full text-sm flex items-center ${
                             getColorForTag(selectedCategory).bg} ${getColorForTag(selectedCategory).text
                           }`}
                           >
@@ -1266,7 +1266,7 @@ To create follow-up prompts that will display with circle indicators:
                           <input
                             type="text"
                             placeholder="Add tags or set a category..."
-                            className="bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-xs p-0 w-full placeholder-gray-400"
+                            className="bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-sm p-0 w-full placeholder-gray-400"
                             value={tagInput}
                             onChange={handleTagInputChange}
                             onKeyDown={handleTagKeyDown}
@@ -1303,7 +1303,7 @@ To create follow-up prompts that will display with circle indicators:
                                       viewBox="0 0 24 24" 
                                       strokeWidth={1.5} 
                                       stroke="currentColor" 
-                                      className="w-3 h-3 text-blue-600"
+                                      className="w-4 h-4 text-blue-600"
                                     >
                                       <path 
                                         strokeLinecap="round" 
@@ -1312,7 +1312,7 @@ To create follow-up prompts that will display with circle indicators:
                                       />
                                     </svg>
                                     <span className="font-medium">{categoryName}</span>
-                                    <span className="text-xs text-gray-400">Category</span>
+                                    <span className="text-sm text-gray-400">Category</span>
                                   </div>
                                 ) : (
                                   <div className="flex items-center">
@@ -1326,7 +1326,7 @@ To create follow-up prompts that will display with circle indicators:
                         </div>
                       )}
                       
-                      <div className="mt-2 text-xs text-gray-500">
+                      <div className="mt-2 text-sm text-gray-500">
                         Press Enter to add a tag, or use <span className="font-mono bg-gray-100 px-1 rounded">@category</span> to add a category.
                       </div>
                     </div>
@@ -1362,6 +1362,37 @@ To create follow-up prompts that will display with circle indicators:
           {successMessage}
         </div>
       )}
+      
+      {/* Global styles */}
+      <style jsx global>{`
+        @keyframes wiggle {
+          0% { transform: translateY(0) rotate(0); }
+          25% { transform: translateY(2px) rotate(-3deg); }
+          50% { transform: translateY(1px) rotate(0); }
+          75% { transform: translateY(1px) rotate(3deg); }
+          100% { transform: translateY(0) rotate(0); }
+        }
+        
+        #generate-title-btn.clicked {
+          animation: wiggle 0.3s ease;
+          background-color: #f0f0f0;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .wand-icon {
+          transition: all 0.2s ease;
+        }
+        
+        #generate-title-btn:hover .wand-icon {
+          transform: rotate(15deg);
+          color: #8B5CF6 !important; /* Vibrant purple color */
+        }
+        
+        #generate-title-btn.clicked .wand-icon {
+          transform: rotate(-15deg) scale(1.2);
+          color: #8B5CF6 !important;
+        }
+      `}</style>
     </div>
   );
 }
