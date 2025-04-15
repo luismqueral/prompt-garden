@@ -154,12 +154,13 @@ export default function PromptDetailPage() {
     console.log("FORK SNIPPET: Fork snippet button clicked");
     
     try {
-      // Encode the snippet text to be URL safe
-      const encodedSnippet = encodeURIComponent(snippetText);
+      // Encode the snippet text to be URL safe - use btoa for base64 encoding
+      // This is more reliable than encodeURIComponent for complex text
+      const base64Snippet = btoa(unescape(encodeURIComponent(snippetText)));
       
-      // Navigate to create page with snippet text
-      console.log(`FORK SNIPPET: Redirecting to create prompt with snippet`);
-      window.location.href = `/?view=create&snippetText=${encodedSnippet}`;
+      // Navigate to create page with snippet text in base64
+      console.log(`FORK SNIPPET: Redirecting to create prompt with encoded snippet`);
+      window.location.href = `/?view=create&snippetText=${base64Snippet}&encoding=base64`;
       
     } catch (error) {
       console.error("FORK SNIPPET ERROR:", error);
