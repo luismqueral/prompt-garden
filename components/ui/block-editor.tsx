@@ -108,6 +108,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
               <>
                 {blocks.map((block, index) => (
                   <React.Fragment key={block.id}>
+                    {/* Render the current block */}
                     <div className="mb-2">
                       {block.type === 'prompt' ? (
                         <PromptBlock
@@ -125,46 +126,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                         />
                       )}
                     </div>
-                    
-                    {/* Add button between blocks */}
-                    {index < blocks.length - 1 && (
-                      <div className="relative h-4 my-1">
-                        <div className="absolute left-1/2 transform -translate-x-1/2">
-                          <button
-                            onClick={() => setShowMenuAt(index + 1)}
-                            className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 shadow-sm group relative"
-                            aria-label="Add new block"
-                          >
-                            <MdAdd size={12} />
-                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                              Add new prompt or note
-                            </div>
-                          </button>
-                          
-                          {showMenuAt === index + 1 && (
-                            <div className="absolute top-5 left-1/2 transform -translate-x-1/2 bg-white rounded shadow-lg p-2 z-10 min-w-[180px]">
-                              <div 
-                                className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
-                                onClick={() => addBlockAtIndex('prompt', index + 1)}
-                              >
-                                Add Follow-Up Prompt
-                              </div>
-                              <div 
-                                className="px-3 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
-                                onClick={() => addBlockAtIndex('note', index + 1)}
-                              >
-                                Add Contextual Note
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </React.Fragment>
                 ))}
                 
-                {/* Add button after the last block */}
-                <div className="relative h-6 mt-1">
+                {/* Add button - only at the end of all blocks */}
+                <div className="relative h-6 mt-2">
                   <div className="absolute left-1/2 transform -translate-x-1/2">
                     <button
                       onClick={() => setShowMenuAt(blocks.length)}
