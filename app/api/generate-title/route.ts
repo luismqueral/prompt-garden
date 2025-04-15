@@ -25,9 +25,10 @@ export async function POST(request: NextRequest) {
     // Parse the request body
     const body = await request.json();
     console.log("API: Request body received:", typeof body);
-    const { content } = body;
+    const { content, systemPrompt, model } = body;
     
     console.log("API: Received content length:", content?.length || 0);
+    console.log("API: Received model:", model || 'default model not specified');
     
     // Validate the content
     if (!content) {
@@ -50,8 +51,17 @@ export async function POST(request: NextRequest) {
     
     console.log("API: API key is configured (length:", apiKey.length, ")");
     
+    // Use provided system prompt or fall back to default
+    const defaultSystemPrompt = "You are a helpful assistant that generates concise, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical. YOU MUST USE NO ADJECTIVES WHATSOEVER, AND ALL LOWERCASE TEXT";
+    
+    // Use provided model or fall back to default
+    const defaultModel = "anthropic/claude-3-haiku:beta";
+    
     // Prepare prompt for title generation
-    const systemPrompt = "You are a helpful assistant that generates simple, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical.";
+    const finalSystemPrompt = systemPrompt || defaultSystemPrompt;
+    const finalModel = model || defaultModel;
+    
+    console.log("API: Using model:", finalModel);
     
     // Clean up the content for the prompt
     const cleanContent = content
@@ -76,9 +86,9 @@ export async function POST(request: NextRequest) {
         'HTTP-Referer': request.headers.get('referer') || 'https://promptgarden.app'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku:beta',
+        model: finalModel,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: finalSystemPrompt },
           { role: 'user', content: userPrompt }
         ],
         max_tokens: 50
@@ -109,7 +119,11 @@ export async function POST(request: NextRequest) {
     console.log("API: Generated title:", generatedTitle);
     
     // Return the generated title
-    return NextResponse.json({ success: true, title: generatedTitle });
+    return NextResponse.json({ 
+      success: true, 
+      title: generatedTitle,
+      model: finalModel
+    });
   } catch (error) {
     console.error('API: Error generating title:', error);
     return NextResponse.json(

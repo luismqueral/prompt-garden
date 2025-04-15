@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Title Generation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        textarea.system-prompt {
+            height: 100px;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            min-height: 100px;
+        }
+        .log {
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 5px 0;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .system-templates {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Title Generation API</h1>
+    <p>Use this page to test the title generation API with different prompts and models.</p>
+    
+    <div class="form-group">
+        <label for="model">Model Selection:</label>
+        <select id="model">
+            <option value="anthropic/claude-3-haiku:beta">Claude 3 Haiku</option>
+            <option value="anthropic/claude-3-sonnet:beta">Claude 3 Sonnet</option>
+            <option value="anthropic/claude-3-opus:beta">Claude 3 Opus</option>
+            <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            <option value="openai/gpt-4">GPT-4</option>
+            <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="google/gemini-pro">Gemini Pro</option>
+            <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="systemPrompt">System Prompt:</label>
+        <div class="system-templates">
+            <select id="promptTemplate" onchange="selectTemplate()">
+                <option value="noAdjectivesLowercase">No Adjectives + Lowercase (Default)</option>
+                <option value="descriptive">Descriptive</option>
+                <option value="action">Action-Oriented</option>
+                <option value="creative">Creative/Metaphorical</option>
+                <option value="benefit">Benefit-Oriented</option>
+                <option value="simple">Ultra-Minimal</option>
+                <option value="question">Question Format</option>
+                <option value="seo">SEO-Optimized</option>
+                <option value="technical">Technical/Precise</option>
+                <option value="emotional">Emotional Appeal</option>
+                <option value="tutorial">How-To Style</option>
+            </select>
+        </div>
+        <textarea id="systemPrompt" class="system-prompt">You are a helpful assistant that generates concise, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical. YOU MUST USE NO ADJECTIVES WHATSOEVER, AND ALL LOWERCASE TEXT</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="content">Prompt Content:</label>
+        <textarea id="content">This is a test prompt content.
+
+I would like to generate a great email template for customer service.
+It should be professional but friendly, and include placeholders for:
+- Customer name
+- Order number
+- Issue description
+- Resolution steps</textarea>
+    </div>
+    
+    <button id="generate">Generate Title</button>
+    
+    <div id="result">
+        <p>Results will appear here...</p>
+    </div>
+
+    <script>
+        // System prompt templates
+        const templates = {
+            noAdjectivesLowercase: "You are a helpful assistant that generates concise, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical. YOU MUST USE NO ADJECTIVES WHATSOEVER, AND ALL LOWERCASE TEXT",
+            
+            descriptive: "You are a helpful assistant that generates concise, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical.",
+            
+            action: "You are an expert at creating action-oriented titles. Generate concise titles (2-6 words) for AI prompts that start with strong verbs and clearly communicate what the prompt helps users accomplish. Use natural capitalization (lowercase except for proper nouns) and focus on the action the prompt enables.",
+            
+            creative: "You are a creative title generator. Create catchy, metaphorical titles (2-6 words) that capture the essence of AI prompts in an engaging, imaginative way. Think of titles that would make someone curious to use the prompt. Be clever and evocative while still conveying the purpose.",
+            
+            benefit: "You are a benefit-focused title creator. Generate titles (2-6 words) that emphasize what the user gains from using this prompt. Focus on outcomes, results, and the value provided. Use natural capitalization and highlight the most compelling benefit of using this prompt.",
+            
+            simple: "Generate the simplest possible titles for prompts. Keep it under 3 words. No capitals. No punctuation. Just the absolute core concept in plain words.",
+            
+            question: "Create engaging question-based titles for prompts. Frame the title (3-7 words) as a direct question that addresses what the prompt helps solve. Use question marks and conversational language to make the title feel interactive and inviting. The question should immediately connect with the user's need that the prompt addresses.",
+            
+            seo: "You are an SEO expert creating keyword-rich titles. Generate clear, searchable titles (3-8 words) that include likely search terms related to the prompt's function. Use natural language with key terms that people would search for when looking for this capability. Focus on clarity and search relevance while maintaining readability.",
+            
+            technical: "Generate precise, technical titles for prompts. Use domain-specific terminology that accurately classifies the prompt's function. Aim for technical accuracy over accessibility. The title should be something a professional in the relevant field would immediately understand and categorize correctly. Use proper technical naming conventions.",
+            
+            emotional: "Create emotionally resonant titles that connect on a human level. Generate titles (2-6 words) that evoke feelings and emphasize how the prompt might make the user feel or the emotional need it fulfills. Use naturally emotive language that creates an immediate emotional connection. Focus on the human aspect of what the prompt does.",
+            
+            tutorial: "Generate instructional 'how-to' style titles. Frame the title as a mini-instruction (3-8 words) that starts with 'How to' or similar phrasing. The title should clearly indicate what skill or result the prompt helps achieve. Focus on the learning or achievement aspect of using this prompt."
+        };
+        
+        // Function to select a template
+        function selectTemplate() {
+            const template = document.getElementById('promptTemplate').value;
+            document.getElementById('systemPrompt').value = templates[template];
+        }
+        
+        document.getElementById('generate').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p class="log">Starting title generation test...</p>';
+            
+            const content = document.getElementById('content').value;
+            const systemPrompt = document.getElementById('systemPrompt').value;
+            const model = document.getElementById('model').value;
+            
+            try {
+                const log = (message, className = '') => {
+                    const p = document.createElement('p');
+                    p.className = `log ${className}`;
+                    p.textContent = message;
+                    resultDiv.appendChild(p);
+                };
+                
+                log(`Model: ${model}`);
+                log(`Making API request to /api/generate-title...`);
+                
+                const response = await fetch('/api/generate-title', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        content,
+                        systemPrompt,
+                        model
+                    }),
+                });
+                
+                log(`Response status: ${response.status}`);
+                
+                const data = await response.json();
+                log(`Response data: ${JSON.stringify(data, null, 2)}`);
+                
+                if (data.success && data.title) {
+                    log(`Generated title: "${data.title}"`, 'success');
+                } else {
+                    log(`Title generation failed: ${data.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                log(`Error making API request: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html> 
