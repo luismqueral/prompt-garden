@@ -149,6 +149,24 @@ export default function PromptDetailPage() {
     }
   };
   
+  // Handle fork prompt snippet
+  const handleForkPromptSnippet = (snippetText: string) => {
+    console.log("FORK SNIPPET: Fork snippet button clicked");
+    
+    try {
+      // Encode the snippet text to be URL safe
+      const encodedSnippet = encodeURIComponent(snippetText);
+      
+      // Navigate to create page with snippet text
+      console.log(`FORK SNIPPET: Redirecting to create prompt with snippet`);
+      window.location.href = `/?view=create&snippetText=${encodedSnippet}`;
+      
+    } catch (error) {
+      console.error("FORK SNIPPET ERROR:", error);
+      alert("There was a problem forking this snippet. Please try again.");
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -305,6 +323,17 @@ export default function PromptDetailPage() {
                           >
                             <MdOutlineRule className="h-4 w-4" />
                             <span>Add as Cursor Rule</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuIndex(null);
+                              handleForkPromptSnippet(block.content);
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <MdAltRoute className="h-4 w-4" />
+                            <span>Fork prompt snippet</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
