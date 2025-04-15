@@ -114,23 +114,6 @@ export default function HomePage() {
   const [selectedPromptText, setSelectedPromptText] = useState<string>('');
   const [selectedPromptTitle, setSelectedPromptTitle] = useState<string>('');
 
-  // Define the tutorial placeholder text
-  const placeholderText = `# How to Create a Prompt
-
-Use # at the beginning to create a title for your prompt.
-
-This editor supports several syntax features to help you create structured prompts.
-
-> This is a note/context block. It appears in a blockquote style and provides additional information that won't be shown in the prompt cards.
-
-You can create regular paragraphs like this one. Use [VARIABLES] in your text to highlight customizable parts of your prompt.
-
-To create follow-up prompts that will display with circle indicators:
-
-1. Start a line with a number followed by a period
-2. Add your follow-up prompt text here
-3. Each numbered item becomes a follow-up prompt`;
-
   // Load prompts from API on component mount
   useEffect(() => {
     const loadPrompts = async () => {
@@ -204,7 +187,7 @@ To create follow-up prompts that will display with circle indicators:
             setIsRemixMode(false);
             setIsEditMode(false);
             setEditPromptId(null);
-            setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+            setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: '' }]);
             setTitleInput("");
             setSelectedTags([]);
             setSelectedCategory(null);
@@ -217,19 +200,37 @@ To create follow-up prompts that will display with circle indicators:
         console.log("Snippet text found in URL, prefilling editor");
         
         try {
-          const decodedSnippet = decodeURIComponent(snippetText);
+          let decodedSnippet = '';
+          // Check if using base64 encoding
+          const encoding = searchParams.get('encoding');
+          
+          if (encoding === 'base64') {
+            // Decode from base64
+            console.log("Using base64 decoding for snippet");
+            decodedSnippet = decodeURIComponent(escape(atob(snippetText)));
+          } else {
+            // Regular URL decoding
+            console.log("Using standard URL decoding for snippet");
+            decodedSnippet = decodeURIComponent(snippetText);
+          }
+          
+          console.log("Snippet decoded successfully, creating block");
+          // Use an empty block first to clear any existing blocks
           setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: decodedSnippet }]);
           setTitleInput(""); // Leave title empty for user to fill
           setSelectedTags([]);
           setSelectedCategory(null);
-          setIsRemixMode(true); // Consider this a remix operation
+          setIsRemixMode(false); // This is not a remix, just a new prompt with prefilled content
           setIsEditMode(false);
           setEditPromptId(null);
           setIsSubmitting(false);
+          
+          // Set a flag to prevent the activeView effect from reinitializing blocks
+          sessionStorage.setItem("skipInitialization", "true");
         } catch (error) {
           console.error("Error decoding snippet text:", error);
           // Fall back to default empty prompt
-          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: '' }]);
           setTitleInput("");
           setIsSubmitting(false);
         }
@@ -237,7 +238,7 @@ To create follow-up prompts that will display with circle indicators:
         // No prompt ID - just set up a new prompt if needed
         if (!isRemixMode && (blocks.length === 0 || blocks[0]?.content === '')) {
           console.log("Setting up new empty prompt");
-          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
+          setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: '' }]);
           setTitleInput("");
           setSelectedTags([]);
           setSelectedCategory(null);
@@ -300,6 +301,14 @@ To create follow-up prompts that will display with circle indicators:
     if (activeView === "create") {
       console.log("Active view switched to 'create'. Checking for remix data.");
       
+      // Check if we should skip initialization (set when handling snippetText)
+      const shouldSkipInit = sessionStorage.getItem("skipInitialization");
+      if (shouldSkipInit) {
+        console.log("Skipping initialization due to snippetText handling");
+        sessionStorage.removeItem("skipInitialization");
+        return;
+      }
+      
       // Check for remix data in sessionStorage FIRST
       const remixContent = sessionStorage.getItem("remixPromptContent");
       const remixTitle = sessionStorage.getItem("remixPromptTitle");
@@ -351,7 +360,7 @@ To create follow-up prompts that will display with circle indicators:
         // No remix data, reset to default 'create' state
         setIsRemixMode(false);
         setBlocks([
-          { id: `block-${Date.now()}-init`, type: 'prompt', content: placeholderText }
+          { id: `block-${Date.now()}-init`, type: 'prompt', content: '' }
         ]);
         setTitleInput("");
         setSelectedTags([]);
@@ -1242,14 +1251,14 @@ To create follow-up prompts that will display with circle indicators:
               <div className="px-6 py-4 flex-1 mx-auto max-w-3xl w-full">
                 {/* Title above content area */}
                 <h1 className="text-2xl font-bold mb-2 text-center">
-                  {isEditMode ? "Edit Prompt" : isRemixMode ? "Fork Prompt" : "Add New Prompt"}
+                  {isEditMode ? "Edit Prompt" : (isRemixMode && searchParams.get('forkId')) ? "Fork Prompt" : "Add New Prompt"}
                 </h1>
                 {isRemixMode && searchParams.get('forkId') && (
                   <p className="text-center text-gray-500 text-sm mb-6">
                     Based on "{titleInput}"
                   </p>
                 )}
-                {!isRemixMode && (
+                {(!isRemixMode || !searchParams.get('forkId')) && (
                   <div className="mb-6"></div>
                 )}
                 
