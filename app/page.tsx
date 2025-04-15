@@ -144,24 +144,28 @@ To create follow-up prompts that will display with circle indicators:
     // Get the view parameter from the URL
     const viewParam = searchParams.get('view');
     const forkId = searchParams.get('forkId');
+    const editId = searchParams.get('editId');
     
-    console.log(`URL params - view: ${viewParam}, forkId: ${forkId}`);
+    console.log(`URL params - view: ${viewParam}, forkId: ${forkId}, editId: ${editId}`);
     
     if (viewParam === 'create') {
       // Set the view state immediately
       setActiveView('create');
       
-      // Check if we're forking an existing prompt
-      if (forkId) {
-        console.log(`Fork request detected for prompt ID: ${forkId}`);
+      // Check if we're editing or forking an existing prompt
+      if (editId || forkId) {
+        const promptId = editId || forkId || '';
+        const isEditing = !!editId;
+        
+        console.log(`${isEditing ? 'Edit' : 'Fork'} request detected for prompt ID: ${promptId}`);
         setIsSubmitting(true); // Show loading state
         
         // Fetch the prompt data using the ID
-        PromptService.getPromptById(forkId)
+        PromptService.getPromptById(promptId)
           .then(promptData => {
-            console.log(`Successfully fetched prompt "${promptData.title}" for forking`);
+            console.log(`Successfully fetched prompt "${promptData.title}" for ${isEditing ? 'editing' : 'forking'}`);
             
-            // Update state with the forked prompt data
+            // Update state with the prompt data
             setIsRemixMode(true);
             setBlocks(contentToBlocks(promptData.content));
             setTitleInput(promptData.title);
@@ -169,8 +173,8 @@ To create follow-up prompts that will display with circle indicators:
             setSelectedCategory(promptData.category || null);
           })
           .catch(error => {
-            console.error("Error fetching prompt for fork:", error);
-            alert("Could not load the prompt to fork. Starting with an empty prompt instead.");
+            console.error(`Error fetching prompt for ${isEditing ? 'edit' : 'fork'}:`, error);
+            alert(`Could not load the prompt to ${isEditing ? 'edit' : 'fork'}. Starting with an empty prompt instead.`);
             
             // Reset to default if fetch fails
             setIsRemixMode(false);
@@ -183,7 +187,7 @@ To create follow-up prompts that will display with circle indicators:
             setIsSubmitting(false); // Hide loading state
           });
       } else {
-        // No fork ID - just set up a new prompt if needed
+        // No prompt ID - just set up a new prompt if needed
         if (!isRemixMode && (blocks.length === 0 || blocks[0]?.content === '')) {
           console.log("Setting up new empty prompt");
           setBlocks([{ id: `block-${Date.now()}`, type: 'prompt', content: placeholderText }]);
