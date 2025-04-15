@@ -21,8 +21,8 @@ export default function AdminPage() {
       router.push('/auth/signin');
       return;
     } else if (session && !session.user?.isAdmin) {
-      // Redirect to error page if authenticated but not an admin
-      router.push('/auth/error?error=AccessDenied');
+      // Redirect to homepage if user is not an admin
+      router.push('/');
       return;
     }
   }, [status, session, router]);

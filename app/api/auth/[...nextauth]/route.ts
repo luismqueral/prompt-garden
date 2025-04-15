@@ -29,9 +29,9 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      // Check if the user's email is in the allowed list
-      return user.email ? allowedEmails.includes(user.email) : false;
+    async signIn({ user }) {
+      // Allow all users to sign in (we'll restrict admin access elsewhere)
+      return true;
     },
     async session({ session }) {
       // Add isAdmin flag to the session

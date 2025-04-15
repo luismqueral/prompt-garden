@@ -9,7 +9,7 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signIn("google", { callbackUrl: "/admin" });
+    await signIn("google", { callbackUrl: "/" });
   };
 
   return (
@@ -18,11 +18,11 @@ export default function SignIn() {
       
       <div className="px-6 py-8 flex-1 mx-auto max-w-md w-full flex flex-col justify-center">
         <div className="bg-white rounded-lg shadow-sm p-8">
-          <h1 className="text-2xl font-bold text-center mb-6">Admin Sign In</h1>
+          <h1 className="text-2xl font-bold text-center mb-6">Sign In</h1>
           
           <p className="text-gray-600 text-center mb-6">
-            Please sign in with your Google account to access the admin area.
-            Only authorized administrators can access this page.
+            Sign in with your Google account to access Prompt Garden.
+            Admin features will be available if your account has the proper permissions.
           </p>
           
           <button

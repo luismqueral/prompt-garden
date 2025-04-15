@@ -28,6 +28,7 @@ import Link from "next/link";
 import { PromptService } from "@/lib/api/promptService";
 import { Prompt as GoogleSheetsPrompt } from "@/lib/googleSheets";
 import { TitleGeneratorService } from "@/lib/api/titleGeneratorService";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 // Add Material Design icons
 import { MdSearch, MdClose, MdContentCopy, MdCheck, MdAutoFixHigh } from "react-icons/md";

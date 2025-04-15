@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 interface HeaderProps {
   onAddPromptClick?: () => void;
@@ -11,6 +12,7 @@ interface HeaderProps {
 
 export function Header({ onAddPromptClick, isCreateView = false }: HeaderProps) {
   const router = useRouter();
+  const { data: session, status } = useSession();
   
   // Handler to navigate to homepage
   const goToHome = () => {
@@ -31,6 +33,14 @@ export function Header({ onAddPromptClick, isCreateView = false }: HeaderProps) 
     } else {
       router.push("/?view=create");
     }
+  };
+
+  const handleSignIn = () => {
+    signIn('google', { callbackUrl: window.location.href });
+  };
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/' });
   };
 
   return (
@@ -61,6 +71,37 @@ export function Header({ onAddPromptClick, isCreateView = false }: HeaderProps) 
         >
           Prompting Tips
         </Link>
+        
+        {/* Admin dashboard link - only visible to admin users */}
+        {session?.user?.isAdmin && (
+          <Link 
+            href="/admin" 
+            className="text-gray-600 hover:underline text-sm"
+          >
+            Admin Dashboard
+          </Link>
+        )}
+        
+        {/* Authentication buttons */}
+        {status === 'authenticated' ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{session.user.email}</span>
+            <button
+              onClick={handleSignOut}
+              className="text-gray-600 hover:text-gray-800 text-sm"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : status === 'unauthenticated' && (
+          <button
+            onClick={handleSignIn}
+            className="text-gray-600 hover:text-gray-800 text-sm"
+          >
+            Sign In
+          </button>
+        )}
+        
         {!isCreateView && (
           <button
             onClick={handleAddPromptClick}
