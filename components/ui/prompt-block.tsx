@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { MdDragIndicator, MdContentCopy, MdDelete } from 'react-icons/md';
@@ -13,6 +13,7 @@ interface PromptBlockProps {
 
 export function PromptBlock({ id, content, onChange, onDelete }: PromptBlockProps) {
   const [localContent, setLocalContent] = useState(content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const {
     attributes,
@@ -29,6 +30,14 @@ export function PromptBlock({ id, content, onChange, onDelete }: PromptBlockProp
   
   useEffect(() => {
     setLocalContent(content);
+  }, [content]);
+  
+  // Focus the textarea when the component mounts with empty content
+  useEffect(() => {
+    if (textareaRef.current && !content) {
+      // Focus and select any content in the textarea
+      textareaRef.current.focus();
+    }
   }, [content]);
   
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -81,10 +90,11 @@ export function PromptBlock({ id, content, onChange, onDelete }: PromptBlockProp
       </div>
       
       <textarea
+        ref={textareaRef}
         value={localContent}
         onChange={handleChange}
         placeholder="Enter your prompt here..."
-        className="w-full p-2 min-h-[80px] border-0 focus:ring-0 text-sm resize-y font-mono"
+        className="w-full p-2 min-h-[120px] border-0 focus:ring-0 text-sm resize-y font-mono"
         style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
         spellCheck="false"
       />
