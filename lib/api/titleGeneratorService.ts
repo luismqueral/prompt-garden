@@ -37,28 +37,34 @@ export const TitleGeneratorService = {
       console.log("TitleGeneratorService: Calling API endpoint with content length:", content.length);
       
       // Call the API endpoint
-      const response = await fetch('/api/generate-title', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content }),
-      });
-      
-      console.log("TitleGeneratorService: API response status:", response.status);
-      
-      // Parse the response
-      const data = await response.json() as GenerateTitleResponse;
-      
-      console.log("TitleGeneratorService: API response data:", data);
-      
-      // Return the generated title or fallback
-      if (data.success && data.title) {
-        console.log("TitleGeneratorService: Successfully generated title:", data.title);
-        return data.title;
-      } else {
-        console.error('TitleGeneratorService: Title generation failed:', data.message);
-        return 'Untitled Prompt';
+      console.log("TitleGeneratorService: Preparing to fetch from /api/generate-title");
+      try {
+        const response = await fetch('/api/generate-title', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ content }),
+        });
+        
+        console.log("TitleGeneratorService: API response status:", response.status);
+        
+        // Parse the response
+        const data = await response.json() as GenerateTitleResponse;
+        
+        console.log("TitleGeneratorService: API response data:", data);
+        
+        // Return the generated title or fallback
+        if (data.success && data.title) {
+          console.log("TitleGeneratorService: Successfully generated title:", data.title);
+          return data.title;
+        } else {
+          console.error('TitleGeneratorService: Title generation failed:', data.message);
+          return 'Untitled Prompt';
+        }
+      } catch (fetchError) {
+        console.error('TitleGeneratorService: Fetch error:', fetchError);
+        return 'Untitled Prompt (API Error)';
       }
     } catch (error) {
       console.error('TitleGeneratorService: Error generating title:', error);

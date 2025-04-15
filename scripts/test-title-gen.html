@@ -21,6 +21,25 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+        textarea.system-prompt {
+            height: 100px;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
         button {
             background-color: #4CAF50;
             color: white;
@@ -28,6 +47,7 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 16px;
         }
         button:hover {
             background-color: #45a049;
@@ -56,10 +76,30 @@
 </head>
 <body>
     <h1>Test Title Generation API</h1>
-    <p>Use this page to test the title generation API directly.</p>
+    <p>Use this page to test the title generation API with different prompts and models.</p>
     
-    <h2>Prompt Content</h2>
-    <textarea id="content">This is a test prompt content.
+    <div class="form-group">
+        <label for="model">Model Selection:</label>
+        <select id="model">
+            <option value="anthropic/claude-3-haiku:beta">Claude 3 Haiku</option>
+            <option value="anthropic/claude-3-sonnet:beta">Claude 3 Sonnet</option>
+            <option value="anthropic/claude-3-opus:beta">Claude 3 Opus</option>
+            <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            <option value="openai/gpt-4">GPT-4</option>
+            <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="google/gemini-pro">Gemini Pro</option>
+            <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="systemPrompt">System Prompt:</label>
+        <textarea id="systemPrompt" class="system-prompt">You are a helpful assistant that generates concise, descriptive titles for AI prompts. Create titles that are 2-6 words and capture the essence of what the prompt does. Use natural, conversational capitalization (don't capitalize every word) to make titles feel more human and authentic. The tone should be straightforward and descriptive rather than overly creative or metaphorical.</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="content">Prompt Content:</label>
+        <textarea id="content">This is a test prompt content.
 
 I would like to generate a great email template for customer service.
 It should be professional but friendly, and include placeholders for:
@@ -67,6 +107,7 @@ It should be professional but friendly, and include placeholders for:
 - Order number
 - Issue description
 - Resolution steps</textarea>
+    </div>
     
     <button id="generate">Generate Title</button>
     
@@ -80,6 +121,8 @@ It should be professional but friendly, and include placeholders for:
             resultDiv.innerHTML = '<p class="log">Starting title generation test...</p>';
             
             const content = document.getElementById('content').value;
+            const systemPrompt = document.getElementById('systemPrompt').value;
+            const model = document.getElementById('model').value;
             
             try {
                 const log = (message, className = '') => {
@@ -89,14 +132,19 @@ It should be professional but friendly, and include placeholders for:
                     resultDiv.appendChild(p);
                 };
                 
-                log('Making API request to /api/generate-title...');
+                log(`Model: ${model}`);
+                log(`Making API request to /api/generate-title...`);
                 
                 const response = await fetch('/api/generate-title', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ content }),
+                    body: JSON.stringify({ 
+                        content,
+                        systemPrompt,
+                        model
+                    }),
                 });
                 
                 log(`Response status: ${response.status}`);
